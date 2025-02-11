@@ -1,7 +1,6 @@
-# Juno 🦟🦠🧬📊
-**A Nextflow Pipeline for Reference-Based Assembly of Oropouche Virus (OROV)**
+# Juno 🦟🦠🧬📊 - A Nextflow Pipeline for Reference-Based Assembly of Oropouche Virus (OROV)
 
-A containerized Nextflow pipeline designed for processing Illumina paired-end metagenomics sequencing data against OROV reference genomes, performing QC, taxonomic classification, variant calling, and consensus generation.
+Juno is designed for processing Illumina paired-end metagenomics sequencing data against OROV reference genomes, performing QC, taxonomic classification, variant calling, and consensus generation.
 
 ## ⚡ Usage
 ```bash
