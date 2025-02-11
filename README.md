@@ -17,6 +17,7 @@ $ sbatch ./juno.sh
 - [Nextflow 23.04.0+](https://www.nextflow.io/docs/latest/install.html)
 - [Singularity](https://docs.sylabs.io/guides/latest/user-guide/quick_start.html#quick-installation-steps) or [Docker](https://docs.docker.com/engine/install/)
 - [Python 3.6+](https://docs.python.org/3/using/unix.html)
+- [Slurm](https://slurm.schedmd.com/documentation.html) (only if HiPerGator will be used)
 
 ## ⚙️ Configuration
 
