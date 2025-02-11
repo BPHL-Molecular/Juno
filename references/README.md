@@ -9,12 +9,11 @@ Although the sequences are in the public domain, we recognize that curated datab
   - Users are encouraged to verify sequence details and metadata directly from GenBank if high-level curation is required for their analysis.
   - The pipeline currently supports only the references provided with it.
 
+---
 
 ## Attribution and Data Integrity
 
 The sequence data provided in this repository were obtained from GenBank and are in the public domain. In line with good scientific practice, we provide the following details for each sequence:
-
----
 
 ## GenBank Accession Numbers and Associated Publications
 
@@ -25,15 +24,6 @@ The sequence data provided in this repository were obtained from GenBank and are
 | OROV segment S          | [PQ064921.1](https://www.ncbi.nlm.nih.gov/nuccore/PQ064921.1)             | Silva et al., 2024         | 822                                          |
 
 *For detailed metadata (e.g., collection date, geographic location, etc.), please refer to the corresponding GenBank record above.*
-
----
-
-## Source Documentation
-
-- **Data Origin:**  
-  All sequences were downloaded from [GenBank](https://www.ncbi.nlm.nih.gov/genbank/).  
-- **Verification:**  
-  The accession numbers provided above are unique identifiers for the sequences. For additional details on each sequence, please refer directly to the GenBank record.
 
 ---
 
