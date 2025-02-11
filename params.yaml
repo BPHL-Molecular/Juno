@@ -1,0 +1,17 @@
+# Input/Output paths
+input_dir: "/path/to/fastq"  # Required
+output_dir: "/path/to/output_dir"  # Required
+
+# References path
+refs_dir: "${projectDir}/references"  # Default reference directory, do not change.
+
+# Database path
+kraken2_db: "/path/to/kraken2_db"  # Required
+
+# Resource configuration
+threads: 32  # Default number of threads per process
+
+# Quality control thresholds
+qc_thresholds:
+    min_coverage: 90
+    min_depth: 15
