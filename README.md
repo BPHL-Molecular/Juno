@@ -1,4 +1,4 @@
-# Juno 🦟🦠🧬📊 - A Nextflow Pipeline for Reference-Based Assembly of Oropouche Virus (OROV)
+# Juno 🦟🦠🧬📊 - A Nextflow Pipeline for Reference-Based Assembly of Oropouche Virus (OROV) Genomes
 
 Juno is designed for processing Illumina paired-end metagenomics sequencing data against OROV reference genomes, performing QC, taxonomic classification, variant calling, and consensus generation.
 
@@ -20,9 +20,11 @@ $ sbatch ./juno.sh
 
 ## ⚙️ Configuration
 
-**Important:** All pipeline parameters **must be set in the `params.yaml` file**. Make sure you edit this file to provide the correct paths and values before running the pipeline. You will also need to download the kraken2 viral database from the [BenLangmead Index zone](https://genome-idx.s3.amazonaws.com/kraken/k2_viral_20241228.tar.gz) link.
+**Important:** All pipeline parameters **must be set in the `params.yaml` file**. Make sure you edit this file to provide the correct paths and values before running the pipeline. You will also need to download the kraken2 viral database from the [BenLangmead Index zone](https://benlangmead.github.io/aws-indexes/k2) link.
 
 ### Required Parameters (in `params.yaml`)
+
+*Please see the [notes](https://github.com/BPHL-Molecular/Juno/tree/main/references) on the references sequences used in this pipeline.*
 
 Below is a sample configuration. **Modify these values as needed:**
 
@@ -89,7 +91,7 @@ output_dir/
    Check Nextflow execution logs in .nextflow.log 
    
 **Low Coverage Regions:**  
-   Regions with coverage below thresholds will be filled with 'N' in consensus sequences.
+   Regions with low coverage (<10x) will be filled with 'N' in consensus sequences.
    
 **Quality Thresholds:**  
    Default quality thresholds can be modified in params.yaml as needed.
