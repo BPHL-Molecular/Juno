@@ -8,29 +8,48 @@ A containerized Nextflow pipeline designed for processing Illumina paired-end me
 $ nextflow run juno.nf -profile singularity -params-file params.yaml
 ```
 
-## 📦 Dependencies and Required Parameters
+## 🐊 HiPerGator Usage
+```bash
+$ sbatch ./juno.sh
+```
+
+## 📦 Dependencies
 - [Nextflow 23.04.0+](https://www.nextflow.io/docs/latest/install.html)
-- [Docker](https://docs.docker.com/engine/install/]/(Singularity)[https://docs.sylabs.io/guides/latest/user-guide/quick_start.html#quick-installation-steps)
+- [Singularity](https://docs.sylabs.io/guides/latest/user-guide/quick_start.html#quick-installation-steps) or [Docker](https://docs.docker.com/engine/install/)
 - [Python 3.6+](https://docs.python.org/3/using/unix.html)
-- [Kraken2 viral database](https://genome-idx.s3.amazonaws.com/kraken/k2_viral_20241228.tar.gz)
 
+## ⚙️ Configuration
 
---input: Directory containing paired-end FASTQ files (must follow the _R1_ and _R2_ naming convention).
+**Important:** All pipeline parameters **must be set in the `params.yaml` file**. Make sure you edit this file to provide the correct paths and values before running the pipeline. You will also need to download the kraken2 viral database from the [BenLangmead Index zone](https://genome-idx.s3.amazonaws.com/kraken/k2_viral_20241228.tar.gz) link.
 
---output: Directory where all pipeline results will be stored.
+### Required Parameters (in `params.yaml`)
 
---k2-db: Path to the Kraken2 database.
+Below is a sample configuration. **Modify these values as needed:**
 
---threads: Number of CPU threads to use.
+```yaml
+# Directory containing paired-end FASTQ files.
+# Files must follow the naming convention including `_R1_` and `_R2_` to denote forward and reverse reads.
+input_dir: "/path/to/fastq" 
 
+# Directory where all pipeline results will be stored.
+output_dir: "/path/to/output_dir"
 
-***It is highly recommended to remove human reads before running this pipeline. We include a python script in this repository for this purpose (host_removal.py). Although, this script will only work on HiPerGator.***
+# Path to the Kraken2 viral database.
+kraken2_db: "/path/to/kraken2_db"
 
+# Number of CPU threads to use.
+threads: 8
+
+# Quality control thresholds
+qc_thresholds:
+    min_coverage: 90
+    min_depth: 15
+```
 
 ## 🛠️ Pipeline Steps
 1. **Quality Control**
-   - Raw read QC (`fastqc`)
-   - Read trimming (`fastp`)
+   - Human Read Removal (`sra-human-scrubber`)
+   - Read QC and trimming (`fastp`)
 2. **Taxonomic Classification**
    - Read classification (`kraken2`)
 3. **Assembly**
@@ -44,8 +63,8 @@ $ nextflow run juno.nf -profile singularity -params-file params.yaml
 ## 📂 Output Structure
 ```
 output_dir/
-├── fastqc/           # Raw read QC reports
-├── trimmed/          # Cleaned reads
+├── dehosted/         # Cleaned reads
+├── trimmed/          # Trimmed reads
 ├── kraken2/          # Classification results
 ├── alignments/       # BAM files & indices
 ├── stats/            # Alignment statistics
@@ -58,7 +77,7 @@ output_dir/
 
 ## 📋 Summary Report Metrics
 - Sample and reference identifiers
-- Raw and cleaned read counts
+- Cleaned read counts
 - Mapping statistics
 - Coverage metrics
 - Variant counts
