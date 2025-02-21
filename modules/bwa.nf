@@ -1,4 +1,4 @@
-process MINIMAP2 {
+process BWA {
     tag "${meta.id}"
     publishDir "${params.output_dir}/alignments", mode: 'copy'
 
@@ -11,8 +11,11 @@ process MINIMAP2 {
     script:
     prefix = "${meta.id}"
     """
-    minimap2 \
-        -ax sr \
+    # Index reference
+    bwa index ${reference}
+
+    # Align reads
+    bwa mem \
         -t ${task.cpus} \
         ${reference} \
         ${trimmed_reads[0]} ${trimmed_reads[1]} \

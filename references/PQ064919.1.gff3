@@ -1,0 +1,8 @@
+##gff-version 3
+#!gff-spec-version 1.21
+#!processor NCBI annotwriter
+##sequence-region PQ064919.1 1 6702
+##species https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?id=118655
+PQ064919.1	Genbank	region	1	6702	.	+	.	ID=PQ064919.1:1..6702;Dbxref=taxon:118655;Name=L;collection-date=2024-01-03;country=Brazil: Am%2C Manaus;gbkey=Src;genome=genomic;isolate=LACENAM_ILMD_0114RLS;isolation-source=plasma;mol_type=viral cRNA;nat-host=Homo sapiens;segment=L
+PQ064919.1	Genbank	CDS	1	6702	.	+	0	ID=cds-XDF38271.1;Dbxref=NCBI_GP:XDF38271.1;Name=XDF38271.1;end_range=6702,.;gbkey=CDS;partial=true;product=RNA-dependent RNA polymerase;protein_id=XDF38271.1;start_range=.,1
+

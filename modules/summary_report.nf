@@ -5,6 +5,7 @@ process SUMMARY_REPORT {
 
     input:
         file fastp_files
+        file kraken2_files
         file coverage_files
         file quast_dirs
         file variants_files
@@ -21,12 +22,30 @@ import os, glob, json
 def debug_print(msg):
     print(f"DEBUG: {msg}", flush=True)
 
+def get_orov_reads(kraken_report):
+    try:
+        with open(kraken_report) as f:
+            for line in f:
+                fields = line.strip().split('\t')
+                if len(fields) >= 6 and "Orthobunyavirus oropoucheense" in fields[5]:
+                    return int(fields[2])
+    except Exception as e:
+        debug_print(f"Error processing kraken report {kraken_report}: {e}")
+    return 0
+
 # Index fastp files
 fastp_dict = {}
 for f in glob.glob("*.fastp.json"):
     sample_id = f.replace(".fastp.json", "")
     fastp_dict[sample_id] = f
     debug_print(f"Found FASTP file: {f} for sample {sample_id}")
+
+# Index kraken2 files
+kraken2_dict = {}
+for f in glob.glob("*.kraken2.report"):
+    sample_id = f.replace(".kraken2.report", "")
+    kraken2_dict[sample_id] = f
+    debug_print(f"Found Kraken2 report: {f} for sample {sample_id}")
 
 # Index coverage files
 coverage_dict = {}
@@ -61,8 +80,8 @@ min_coverage = float(os.environ.get("MIN_COVERAGE", "90"))
 min_depth = float(os.environ.get("MIN_DEPTH", "15"))
 
 # Prepare headers and output lines
-header = ["sampleID", "reference", "num_raw_reads", "num_clean_reads", "num_mapped_reads",
-          "percent_mapped_clean_reads", "mean_base_qual", "mean_map_qual",
+header = ["sampleID", "reference", "num_raw_reads", "num_clean_reads", "kraken2_reads",
+          "num_mapped_reads", "percent_mapped_clean_reads", "mean_base_qual", "mean_map_qual",
           "percent_reference_covered", "mean_ref_depth", "reference_length", "assembly_length",
           "num_variants", "total_n_bases", "qc_pass_fail"]
 out_lines = ["\t".join(header)]
@@ -88,6 +107,11 @@ for composite_key in sorted(coverage_dict.keys()):
         fastp_data = json.load(f)
         num_raw_reads = fastp_data["summary"]["before_filtering"]["total_reads"]
         num_clean_reads = fastp_data["summary"]["after_filtering"]["total_reads"]
+
+    # Get kraken2 data
+    kraken2_reads = 0
+    if sample_id in kraken2_dict:
+        kraken2_reads = get_orov_reads(kraken2_dict[sample_id])
 
     # Get coverage data
     with open(coverage_dict[composite_key]) as f:
@@ -141,6 +165,7 @@ for composite_key in sorted(coverage_dict.keys()):
         ref_id,
         str(num_raw_reads),
         str(num_clean_reads),
+        str(kraken2_reads),
         str(int(num_mapped_reads)),
         f"{percent_mapped_clean_reads:.2f}",
         f"{mean_base_qual:.1f}",

@@ -3,7 +3,7 @@ process IVAR_VARIANTS {
     publishDir "${params.output_dir}/variants", mode: 'copy'
 
     input:
-    tuple val(meta), path(sorted_bam), path(bai), path(reference)
+    tuple val(meta), path(sorted_bam), path(bai), path(reference), path(gff)
 
     output:
     tuple val(meta), path("${prefix}.variants.tsv"), emit: variants
@@ -18,9 +18,9 @@ process IVAR_VARIANTS {
     ivar variants \
         -p ${prefix} \
         -r ${reference} \
+        -g ${gff} \
         -m 10 \
         -q 20 \
-        -t 0.6
 
     mv ${prefix}.tsv ${prefix}.variants.tsv
     """
@@ -47,7 +47,6 @@ process IVAR_CONSENSUS {
     ivar consensus \
         -p ${prefix} \
         -q 20 \
-        -t 0.6 \
         -m 10 \
         -n N
 
