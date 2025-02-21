@@ -1,6 +1,6 @@
 # Juno 🦟🦠🧬📊 - A Nextflow Pipeline for Reference-Based Assembly of Oropouche Virus (OROV) Genomes
 
-Juno is designed for processing Illumina paired-end metagenomics sequencing data against OROV reference genomes, performing QC, taxonomic classification, variant calling, and consensus generation.
+Juno is designed for processing Illumina paired-end metagenomics sequencing data against OROV reference genomes, performing QC, taxonomic classification, alignment, variant calling, and consensus generation.
 
 ## ⚡ Usage
 ```bash
@@ -20,33 +20,35 @@ $ sbatch ./juno.sh
 
 ## ⚙️ Configuration
 
-**Important:** All pipeline parameters **must be set in the `params.yaml` file**. Make sure you edit this file to provide the correct paths and values before running the pipeline. You will also need to download the kraken2 viral database from the [BenLangmead Index zone](https://benlangmead.github.io/aws-indexes/k2) link.
+**Important:** All pipeline parameters **must be set in the `params.yaml` file**. Make sure you edit this file to provide the correct paths and values before running the pipeline. 
 
-### Required Parameters (in `params.yaml`)
+You will also need to download the kraken2 viral database from the BenLangmead Index zone [link](https://benlangmead.github.io/aws-indexes/k2).
 
-*Please see the [notes](https://github.com/BPHL-Molecular/Juno/tree/main/references) on the references sequences used in this pipeline.*
-
-Below is a sample configuration. **Modify these values as needed:**
+#### Required Parameters (in `params.yaml`):
 
 ```yaml
-# Directory containing paired-end FASTQ files.
-# Files must follow the naming convention including `_R1_` and `_R2_` to denote forward and reverse reads.
-input_dir: "/path/to/fastq" 
-
-# Directory where all pipeline results will be stored.
+# Input/Output paths
+input_dir: "/path/to/fastq"
 output_dir: "/path/to/output_dir"
 
-# Path to the Kraken2 viral database.
+# References path, default reference directory, DO NOT change.
+refs_dir: "${projectDir}/references"
+
+# Database path
 kraken2_db: "/path/to/kraken2_db"
 
-# Number of CPU threads to use.
-threads: 8
+# Resource configuration, default number of threads per process
+threads: 32
+
+# Human scrubber processing option, set to true for HPC environments
+parallel_hrrt: false
 
 # Quality control thresholds
 qc_thresholds:
     min_coverage: 90
     min_depth: 15
 ```
+###### Please see the [notes](https://github.com/BPHL-Molecular/Juno/tree/main/references) on the references sequences used in this pipeline.
 
 ## 🛠️ Pipeline Steps
 1. **Quality Control**
@@ -55,7 +57,7 @@ qc_thresholds:
 2. **Taxonomic Classification**
    - Read classification (`kraken2`)
 3. **Assembly**
-   - Reference alignment (`minimap2`)
+   - Reference alignment (`bwa`)
    - SAM/BAM processing (`samtools`)
    - Variant calling & consensus (`ivar`)
 4. **Quality Assessment**
@@ -68,7 +70,7 @@ output_dir/
 ├── dehosted/         # Cleaned reads
 ├── trimmed/          # Trimmed reads
 ├── kraken2/          # Classification results
-├── alignments/       # BAM files & indices
+├── alignments/       # SAM/BAM files & indices
 ├── stats/            # Alignment statistics
 ├── variants/         # Variant calls
 ├── consensus/        # Consensus sequences
@@ -80,6 +82,7 @@ output_dir/
 ## 📋 Summary Report Metrics
 - Sample and reference identifiers
 - Cleaned read counts
+- Classification read counts
 - Mapping statistics
 - Coverage metrics
 - Variant counts
