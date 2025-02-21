@@ -1,0 +1,9 @@
+##gff-version 3
+#!gff-spec-version 1.21
+#!processor NCBI annotwriter
+##sequence-region PQ064921.1 1 822
+##species https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?id=118655
+PQ064921.1	Genbank	region	1	822	.	+	.	ID=PQ064921.1:1..822;Dbxref=taxon:118655;Name=S;collection-date=2024-01-03;country=Brazil: Am%2C Manaus;gbkey=Src;genome=genomic;isolate=LACENAM_ILMD_0114RLS;isolation-source=plasma;mol_type=viral cRNA;nat-host=Homo sapiens;segment=S
+PQ064921.1	Genbank	CDS	1	672	.	+	0	ID=cds-XDF39002.1;Dbxref=NCBI_GP:XDF39002.1;Name=XDF39002.1;gbkey=CDS;partial=true;product=nucleoprotein;protein_id=XDF39002.1;start_range=.,1
+PQ064921.1	Genbank	CDS	1	274	.	+	1	ID=cds-XDF39001.1;Dbxref=NCBI_GP:XDF39001.1;Name=XDF39001.1;gbkey=CDS;partial=true;product=nonstructrural protein;protein_id=XDF39001.1;start_range=.,1
+

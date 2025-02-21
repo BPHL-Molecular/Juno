@@ -1,0 +1,8 @@
+##gff-version 3
+#!gff-spec-version 1.21
+#!processor NCBI annotwriter
+##sequence-region PQ064920.1 1 4317
+##species https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?id=118655
+PQ064920.1	Genbank	region	1	4317	.	+	.	ID=PQ064920.1:1..4317;Dbxref=taxon:118655;Name=M;collection-date=2024-01-03;country=Brazil: Am%2C Manaus;gbkey=Src;genome=genomic;isolate=LACENAM_ILMD_0114RLS;isolation-source=plasma;mol_type=viral cRNA;nat-host=Homo sapiens;segment=M
+PQ064920.1	Genbank	CDS	1	4257	.	+	0	ID=cds-XDF38578.1;Dbxref=NCBI_GP:XDF38578.1;Name=XDF38578.1;gbkey=CDS;partial=true;product=membrane polyprotein;protein_id=XDF38578.1;start_range=.,1
+
