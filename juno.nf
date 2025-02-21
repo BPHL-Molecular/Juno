@@ -43,20 +43,28 @@ Channel
     .ifEmpty { error "No reference files found in ${params.refs_dir}" }
     .map { ref ->
         def ref_id = ref.name.replaceAll(/\.(fasta|fa)$/, '')
-        tuple(ref_id, ref)
+        def gff = file("${params.refs_dir}/${ref_id}.gff3", checkIfExists: true)
+        [ref_id, ref, gff]
     }
-    .tap { refs_ch }
-    .map { ref_id, ref -> ref_id }
+    .multiMap { ref_id, ref, gff ->
+        basic: tuple(ref_id, ref)
+        gff: tuple(ref_id, ref, gff)
+        ids: ref_id
+    }
+    .set { refs }
+
+// Log found references
+refs.ids
     .collect()
-    .view { refs ->
-        "Found ${refs.size()} references:\n${refs.sort().join('\n')}"
+    .view { ids ->
+        "Found ${ids.size()} references:\n${ids.sort().join('\n')}"
     }
 
 // Modules
 include { HRRT }            from './modules/hrrt'
 include { FASTP }           from './modules/fastp'
 include { KRAKEN2 }         from './modules/kraken2'
-include { MINIMAP2 }        from './modules/minimap2'
+include { BWA }             from './modules/bwa'
 include { SAMTOOLS }        from './modules/samtools'
 include { IVAR_VARIANTS }   from './modules/ivar'
 include { IVAR_CONSENSUS }  from './modules/ivar'
@@ -65,14 +73,15 @@ include { SUMMARY_REPORT }  from './modules/summary_report'
 include { MULTIQC }         from './modules/multiqc'
 
 workflow {
-    // Initial QC and trimming
-    HRRT(input_ch)
-    FASTP(HRRT.out.dehosted_reads)
+    // Initial QC
+    ch_fastq = HRRT(input_ch) | FASTP
+
+    // Taxonomic classification
     KRAKEN2(FASTP.out.trimmed_reads)
 
-    // Alignment and BAM processing chain
-    FASTP.out.trimmed_reads
-        .combine(refs_ch)
+    // Alignment and SAM/BAM processing
+    ch_aligned = FASTP.out.trimmed_reads \
+        .combine(refs.basic) \
         .map { meta, trimmed_reads, ref_id, ref ->
             def new_meta = [
                 id: "${meta.id}_${ref_id}",
@@ -80,69 +89,57 @@ workflow {
                 ref_id: ref_id
             ]
             tuple(new_meta, trimmed_reads, ref)
-        }
-        .set { reads_with_refs }
+        } \
+        | BWA \
+        | SAMTOOLS
 
-    MINIMAP2(reads_with_refs)
-    SAMTOOLS(MINIMAP2.out.sam)
-
-    // Prepare input for IVAR processes
-    SAMTOOLS.out.indexed_bam
+    // Variant calling
+    ch_variants = ch_aligned.indexed_bam
         .map { meta, sorted_bam, bai ->
             [meta.ref_id, meta, sorted_bam, bai]
         }
-        .combine(refs_ch, by: 0)
+        .combine(refs.gff, by: 0)
+        .map { ref_id, meta, sorted_bam, bai, ref, gff ->
+            tuple(meta, sorted_bam, bai, ref, gff)
+        } \
+        | IVAR_VARIANTS
+
+    // Consensus generation and post-assembly QC
+    ch_consensus = ch_aligned.indexed_bam
+        .map { meta, sorted_bam, bai ->
+            [meta.ref_id, meta, sorted_bam, bai]
+        }
+        .combine(refs.basic, by: 0)
         .map { ref_id, meta, sorted_bam, bai, ref ->
             tuple(meta, sorted_bam, bai, ref)
+        } \
+        | IVAR_CONSENSUS
+
+    ch_quast = ch_consensus.consensus
+        .map { meta, cons ->
+            [meta.ref_id, meta, cons]
         }
-        .set { ivar_input }
+        .combine(refs.basic, by: 0)
+        .map { ref_id, meta, cons, ref ->
+            tuple(meta, cons, ref)
+        } \
+        | QUAST
 
-    IVAR_VARIANTS(ivar_input)
-    IVAR_CONSENSUS(ivar_input)
+    // Collect outputs for reporting
+    ch_fastp = FASTP.out.json.map { meta, json -> json }.collect()
+    ch_kraken2_out = KRAKEN2.out.report.map { meta, report -> report }.collect()
+    ch_coverage = ch_aligned.coverage.map { meta, coverage -> coverage }.collect()
+    ch_quast_stats = ch_quast.stats.map { meta, stats -> stats }.collect()
+    ch_variants_out = ch_variants.variants.map { meta, variants -> variants }.collect()
+    ch_consensus_out = ch_consensus.consensus.map { meta, consensus -> consensus }.collect()
 
-    // Prepare input for QUAST process
-    IVAR_CONSENSUS.out.consensus
-        .map { meta, consensus ->
-            [meta.ref_id, meta, consensus]
-        }
-        .combine(refs_ch, by: 0)
-        .map { ref_id, meta, consensus, ref ->
-            tuple(meta, consensus, ref)
-        }
-        .set { consensus_ref_ch }
-
-    QUAST(consensus_ref_ch)
-
-    // Branch channels for summary report
-    FASTP.out.json
-        .map { meta, json -> json }
-        .collect()
-        .set { fastp_files }
-
-    SAMTOOLS.out.coverage
-        .map { meta, coverage -> coverage }
-        .collect()
-        .set { coverage_files }
-
-    QUAST.out.stats
-        .map { meta, stats -> stats }
-        .collect()
-        .set { quast_files }
-
-    IVAR_VARIANTS.out.variants
-        .map { meta, variants -> variants }
-        .collect()
-        .set { variants_files }
-
-    IVAR_CONSENSUS.out.consensus
-        .map { meta, consensus -> consensus }
-        .collect()
-        .set { consensus_files }
-
-    // Summary report with key metrics
-    SUMMARY_REPORT(fastp_files, coverage_files, quast_files, variants_files, consensus_files)
-
-    // MultiQC report
-    MULTIQC(SUMMARY_REPORT.out.summary)
+    // Generate summary report
+    SUMMARY_REPORT(
+        ch_fastp,
+        ch_kraken2_out,
+        ch_coverage,
+        ch_quast_stats,
+        ch_variants_out,
+        ch_consensus_out
+    ) | MULTIQC
 }
-
