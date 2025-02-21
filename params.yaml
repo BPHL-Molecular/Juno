@@ -2,7 +2,7 @@
 input_dir: "/path/to/fastq"
 output_dir: "/path/to/output_dir"
 
-# References path, default reference directory, DO NOT CHANGE!
+# References path, default reference directory, DO NOT change.
 refs_dir: "${projectDir}/references"
 
 # Database path
