@@ -10,29 +10,36 @@ process HRRT {
 
     script:
     prefix = "${meta.id}"
-    """
-    # Decompress files
-    gzip -d -c ${reads[0]} > ${prefix}_R1.fastq
-    gzip -d -c ${reads[1]} > ${prefix}_R2.fastq
+    if (params.parallel_hrrt)
+        """
+        # Process R1 and R2 in parallel (HPC environment)
+        (
+            gzip -d -c ${reads[0]} > ${prefix}_R1.fastq
+            /opt/scrubber/scripts/scrub.sh -r -p ${task.cpus} -i ${prefix}_R1.fastq -o ${prefix}_R1_cleaned.fastq
+            gzip ${prefix}_R1_cleaned.fastq
+            rm ${prefix}_R1.fastq
+        ) &
 
-    # Run human read removal
-    /opt/scrubber/scripts/scrub.sh \
-        -r \
-        -p ${task.cpus} \
-        -i ${prefix}_R1.fastq \
-        -o ${prefix}_R1_cleaned.fastq
+        (
+            gzip -d -c ${reads[1]} > ${prefix}_R2.fastq
+            /opt/scrubber/scripts/scrub.sh -r -p ${task.cpus} -i ${prefix}_R2.fastq -o ${prefix}_R2_cleaned.fastq
+            gzip ${prefix}_R2_cleaned.fastq
+            rm ${prefix}_R2.fastq
+        ) &
 
-    /opt/scrubber/scripts/scrub.sh \
-        -r \
-        -p ${task.cpus} \
-        -i ${prefix}_R2.fastq \
-        -o ${prefix}_R2_cleaned.fastq
+        wait
+        """
+    else
+        """
+        # Process R1 and R2 sequentially
+        gzip -d -c ${reads[0]} > ${prefix}_R1.fastq
+        /opt/scrubber/scripts/scrub.sh -r -p ${task.cpus} -i ${prefix}_R1.fastq -o ${prefix}_R1_cleaned.fastq
+        gzip ${prefix}_R1_cleaned.fastq
+        rm ${prefix}_R1.fastq
 
-    # Compress cleaned files
-    gzip ${prefix}_R1_cleaned.fastq
-    gzip ${prefix}_R2_cleaned.fastq
-
-    # Cleanup intermediate files
-    rm ${prefix}_R1.fastq ${prefix}_R2.fastq
-    """
+        gzip -d -c ${reads[1]} > ${prefix}_R2.fastq
+        /opt/scrubber/scripts/scrub.sh -r -p ${task.cpus} -i ${prefix}_R2.fastq -o ${prefix}_R2_cleaned.fastq
+        gzip ${prefix}_R2_cleaned.fastq
+        rm ${prefix}_R2.fastq
+        """
 }
