@@ -18,11 +18,7 @@ process SAMTOOLS {
     prefix = "${meta.id}"
     """
     # Convert SAM to BAM
-    samtools view -@ ${task.cpus} -bS -o ${prefix}.bam ${sam}
-
-    # Sort BAM
-    samtools sort -@ ${task.cpus} -o ${prefix}.sorted.bam ${prefix}.bam
-    rm ${prefix}.bam
+    samtools view -@ ${task.cpus} -bS ${sam} | samtools sort -@ ${task.cpus} -o ${prefix}.sorted.bam
 
     # Index BAM
     samtools index -@ ${task.cpus} ${prefix}.sorted.bam
