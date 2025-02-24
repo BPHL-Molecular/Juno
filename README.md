@@ -20,11 +20,24 @@ $ sbatch ./juno.sh
 
 ## ⚙️ Configuration
 
+#### 1. Clone this repository
+
+```bash
+git clone https://github.com/BPHL-Molecular/Juno.git
+cd Juno
+```
+
+#### 2. Create a directory for Input FASTQ Files
+
+```bash
+mkdir fastq
+# move or copy your FASTQ files into this directory
+```
+
+#### 3. Set required parameters:
 **Important:** All pipeline parameters **must be set in the `params.yaml` file**. Make sure you edit this file to provide the correct paths and values before running the pipeline. 
 
-You will also need to download the kraken2 viral database from the BenLangmead Index zone [link](https://benlangmead.github.io/aws-indexes/k2).
-
-#### Required Parameters (in `params.yaml`):
+You will also need to download the kraken2/bracken viral database from the BenLangmead Index zone [link](https://benlangmead.github.io/aws-indexes/k2).
 
 ```yaml
 # Input/Output paths
@@ -52,17 +65,17 @@ qc_thresholds:
 
 ## 🛠️ Pipeline Steps
 1. **Quality Control**
-   - Human Read Removal (`sra-human-scrubber`)
-   - Read QC and trimming (`fastp`)
+   - Human Read Removal - [`sra-human-scrubber`](https://github.com/ncbi/sra-human-scrubber)
+   - Read QC and trimming - [`fastp`](https://github.com/OpenGene/fastp)
 2. **Taxonomic Classification**
-   - Read classification (`kraken2`)
+   - Read classification - [`kraken2`](https://github.com/DerrickWood/kraken2)
 3. **Assembly**
-   - Reference alignment (`bwa`)
-   - SAM/BAM processing (`samtools`)
-   - Variant calling & consensus (`ivar`)
+   - Reference alignment - [`bwa`](https://github.com/lh3/bwa)
+   - SAM/BAM processing - [`samtools`](https://github.com/samtools/samtools)
+   - Variant calling & consensus - [`ivar`](https://github.com/andersen-lab/ivar)
 4. **Quality Assessment**
-   - Assembly evaluation (`quast`)
-   - Report generation (`multiqc`)
+   - Assembly evaluation - [`quast`](https://github.com/ablab/quast)
+   - Report generation - [`multiqc`](https://github.com/MultiQC/MultiQC)
 
 ## 📂 Output Structure
 ```
@@ -107,4 +120,3 @@ We welcome contributions to make Juno better! Feel free to open issues or submit
 
 ## ⚖️ License
 Juno is licensed under the [MIT License](LICENSE).
-
