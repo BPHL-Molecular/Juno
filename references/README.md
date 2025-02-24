@@ -1,7 +1,7 @@
 ## Notes on Reference Sequence Data
 
 - **Public Domain:**  
-Although the sequences are in the public domain, we recognize that curated databases like RefSeq provide additional quality control and standardized annotations. However, the reference sequences used in this pipeline come from isolates directly related to the [most recent outbreak](https://www.nature.com/articles/s41591-024-03300-3), making them more representative of the current viral population than the older RefSeq entries.
+Although the sequences inlcuded in this pipeline are available in the public domain, we recognize that curated databases like RefSeq provide additional quality control and standardized annotations. However, the reference sequences used in this pipeline come from isolates directly related to the [most recent outbreak](https://www.nature.com/articles/s41591-024-03300-3), making them more representative of the current viral population than the older RefSeq entries.
   
 - **Limitations and Differences:**  
   - The sequences in this repository are **not** curated RefSeq entries.
