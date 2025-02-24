@@ -1,9 +1,9 @@
 #!/bin/bash
 #SBATCH --account=bphl-umbrella
 #SBATCH --qos=bphl-umbrella
-#SBATCH --job-name=juno_orov_assembl
+#SBATCH --job-name=juno_orov_assembly
 #SBATCH --mail-type=END,FAIL
-#SBATCH --mail-user=user@email.gov
+#SBATCH --mail-user=user@email
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=32
 #SBATCH --mem=200gb
