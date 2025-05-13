@@ -12,7 +12,7 @@ process IVAR_VARIANTS {
     prefix = "${meta.id}"
     """
     samtools mpileup \
-        -aa -A -d 0 -B -Q 0 \
+        -aa -A -d 100 -B -Q 0 \
         -f ${reference} \
         ${sorted_bam} | \
     ivar variants \
@@ -41,7 +41,7 @@ process IVAR_CONSENSUS {
     prefix = "${meta.id}"
     """
     samtools mpileup \
-        -aa -A -d 0 -B -Q 0 \
+        -aa -A -d 100 -B -Q 0 \
         -f ${reference} \
         ${sorted_bam} | \
     ivar consensus \
