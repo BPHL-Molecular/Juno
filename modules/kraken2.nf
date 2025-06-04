@@ -8,7 +8,7 @@ process KRAKEN2 {
 
     output:
     tuple val(meta), path("${prefix}.kraken2.report"), emit: report
-    path "${prefix}.kraken2.out", emit: classifications
+    tuple val(meta), path("${prefix}.kraken2.out"), emit: classifications
 
     script:
     prefix = "${meta.id}"
