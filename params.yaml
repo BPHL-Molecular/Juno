@@ -1,20 +1,14 @@
 # Input/Output paths
 input_dir: "/path/to/fastq"
-output_dir: "/path/to/output_dir"
+output_dir: "/path/to/juno_output"
 
-# References path, default reference directory, DO NOT change.
-refs_dir: "${projectDir}/references"
-
-# Database path
+# Kraken2 database path
 kraken2_db: "/path/to/kraken2_db"
 
-# Resource configuration, default number of threads per process
-threads: 32
-
-# Human scrubber processing option, set to true for HPC environments
-parallel_hrrt: false
+# Human read removal using NCBI's SRA human read removal tool (HRRT)
+skip_hrrt: false
 
 # Quality control thresholds
 qc_thresholds:
-    min_coverage: 90
-    min_depth: 15
+    min_coverage: 90 # Minimum coverage percentage
+    min_depth: 15 # Minimum depth of coverage (x)
