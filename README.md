@@ -1,6 +1,6 @@
 # Juno 🦟🦠🧬📊 - A Nextflow Pipeline for Reference-Based Assembly of Oropouche Virus (OROV) Genomes
 
-Juno is designed for processing Illumina paired-end metagenomics sequencing data against OROV reference genomes, performing QC, taxonomic classification, alignment, variant calling, and consensus generation.
+Juno is designed for processing Illumina paired-end sequencing data against OROV reference genomes, performing QC, taxonomic classification, alignment, variant calling, and consensus generation.
 
 ## ⚡ Usage
 ```bash
@@ -16,7 +16,7 @@ $ sbatch ./juno.sh
 - [Nextflow 23.04.0+](https://www.nextflow.io/docs/latest/install.html)
 - [Singularity](https://docs.sylabs.io/guides/latest/user-guide/quick_start.html#quick-installation-steps) or [Docker](https://docs.docker.com/engine/install/)
 - [Python 3.6+](https://docs.python.org/3/using/unix.html)
-- [Slurm](https://slurm.schedmd.com/documentation.html) (only if HiPerGator will be used)
+- [Slurm](https://slurm.schedmd.com/documentation.html) (This applies only if HiPerGator is used)
 
 ## ⚙️ Configuration
 
@@ -37,31 +37,35 @@ mkdir fastq
 #### 3. Set required parameters:
 **Important:** All pipeline parameters **must be set in the `params.yaml` file**. Make sure you edit this file to provide the correct paths and values before running the pipeline. 
 
-You will also need to download the kraken2/bracken viral database from the BenLangmead Index zone [link](https://benlangmead.github.io/aws-indexes/k2).
-
 ```yaml
 # Input/Output paths
 input_dir: "/path/to/fastq"
-output_dir: "/path/to/output_dir"
+output_dir: "/path/to/juno_output"
 
-# References path, default reference directory, DO NOT change.
-refs_dir: "${projectDir}/references"
-
-# Database path
+# Kraken2 database path
 kraken2_db: "/path/to/kraken2_db"
 
-# Resource configuration, default number of threads per process
-threads: 32
-
-# Human scrubber processing option, set to true for HPC environments
-parallel_hrrt: false
+# Human read removal using NCBI's SRA human read removal tool (HRRT)
+skip_hrrt: false
 
 # Quality control thresholds
 qc_thresholds:
-    min_coverage: 90
-    min_depth: 15
+    min_coverage: 90 # Minimum coverage percentage
+    min_depth: 15 # Minimum depth of coverage (x)
 ```
-###### Please see the [notes](https://github.com/BPHL-Molecular/Juno/tree/main/references) on the references sequences used in this pipeline.
+
+You will need to download the kraken2/bracken viral database from the BenLangmead Index zone [link](https://benlangmead.github.io/aws-indexes/k2) for read classification.
+
+The pipeline includes a step for removing human reads using [NCBI’s SRA Human Read Removal Tool (HRRT)](https://ncbiinsights.ncbi.nlm.nih.gov/2023/02/02/scrubbing-human-sequences-sra-submissions/). This step is enabled by default, but please note that it significantly increases runtime due to the large container size and the intensive I/O involved in decompressing input files and recompressing cleaned outputs.
+
+To skip this step and use raw reads directly, set: ```--skip_hrrt: true```
+
+Note: Skipping HRRT may be appropriate for:
+- Non-human samples
+- Pre-cleaned datasets
+- Testing/development workflows
+
+###### Please see the [notes](https://github.com/BPHL-Molecular/Juno/tree/main/references) on the reference genomes used in this pipeline.
 
 ## 🛠️ Pipeline Steps
 1. **Quality Control**
@@ -69,13 +73,16 @@ qc_thresholds:
    - Read QC and trimming - [`fastp`](https://github.com/OpenGene/fastp)
 2. **Taxonomic Classification**
    - Read classification - [`kraken2`](https://github.com/DerrickWood/kraken2)
+   - Filter classified OROV reads - [`krakentools`](https://github.com/jenniferlu717/KrakenTools)
 3. **Assembly**
    - Reference alignment - [`bwa`](https://github.com/lh3/bwa)
    - SAM/BAM processing - [`samtools`](https://github.com/samtools/samtools)
    - Variant calling & consensus - [`ivar`](https://github.com/andersen-lab/ivar)
 4. **Quality Assessment**
    - Assembly evaluation - [`quast`](https://github.com/ablab/quast)
-   - Report generation - [`multiqc`](https://github.com/MultiQC/MultiQC)
+5. **Aggregate and Summarize Results**
+   - Aggregate results from bioinformatics analyses - [`multiqc`](https://github.com/MultiQC/MultiQC)
+   - Summary report generation - python-based script to summarize key assembly and QC metrics
 
 ## 📂 Output Structure
 ```
@@ -83,6 +90,7 @@ output_dir/
 ├── dehosted/         # Cleaned reads
 ├── trimmed/          # Trimmed reads
 ├── kraken2/          # Classification results
+├── filtered_reads/   # Classified OROV reads
 ├── alignments/       # SAM/BAM files & indices
 ├── stats/            # Alignment statistics
 ├── variants/         # Variant calls
@@ -94,6 +102,7 @@ output_dir/
 
 ## 📋 Summary Report Metrics
 - Sample and reference identifiers
+- Raw read counts
 - Cleaned read counts
 - Classification read counts
 - Mapping statistics

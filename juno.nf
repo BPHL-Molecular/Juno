@@ -1,7 +1,7 @@
 #!/usr/bin/env nextflow
 
 /*
-  Juno Pipeline
+  Juno Pipeline (named after Juno Beach in Florida)
   Florida's BPHL Nextflow pipeline for OROV reference-based assembly from metagenomics reads.
   Author: Arnold Rodriguez Hilario
   Email: arnold.rodriguezhilario@flhealth.gov
@@ -15,8 +15,8 @@ log.info """
     ==========================================================================
     input dir    : ${params.input_dir}
     output dir   : ${params.output_dir}
-    references   : ${params.refs_dir}
     kraken2 db   : ${params.kraken2_db}
+    skip hrrt    : ${params.skip_hrrt}
     ==========================================================================
     """
 
@@ -39,11 +39,11 @@ Channel
 
 // Reference channel
 Channel
-    .fromPath("${params.refs_dir}/*.{fasta,fa}")
-    .ifEmpty { error "No reference files found in ${params.refs_dir}" }
+    .fromPath("${projectDir}/references/*.{fasta,fa}")
+    .ifEmpty { error "No reference files found in ${projectDir}/references" }
     .map { ref ->
         def ref_id = ref.name.replaceAll(/\.(fasta|fa)$/, '')
-        def gff = file("${params.refs_dir}/${ref_id}.gff3", checkIfExists: true)
+        def gff = file("${projectDir}/references/${ref_id}.gff3", checkIfExists: true)
         [ref_id, ref, gff]
     }
     .multiMap { ref_id, ref, gff ->
@@ -53,17 +53,18 @@ Channel
     }
     .set { refs }
 
-// Log found references
+// Log references
 refs.ids
     .collect()
     .view { ids ->
-        "Found ${ids.size()} references:\n${ids.sort().join('\n')}"
+        "Using ${ids.size()} references:\n${ids.sort().join('\n')}"
     }
 
 // Modules
 include { HRRT }            from './modules/hrrt'
 include { FASTP }           from './modules/fastp'
 include { KRAKEN2 }         from './modules/kraken2'
+include { KRAKENTOOLS }     from './modules/krakentools'
 include { BWA }             from './modules/bwa'
 include { SAMTOOLS }        from './modules/samtools'
 include { IVAR_VARIANTS }   from './modules/ivar'
@@ -73,27 +74,49 @@ include { SUMMARY_REPORT }  from './modules/summary_report'
 include { MULTIQC }         from './modules/multiqc'
 
 workflow {
-    // Initial QC
-    ch_fastq = HRRT(input_ch) | FASTP
+    // Initial QC channel and conditional human read removal process
+    if (params.skip_hrrt) {
+        ch_processed = input_ch | FASTP
+    } else {
+        ch_processed = input_ch | HRRT | FASTP
+    }
 
-    // Taxonomic classification
-    KRAKEN2(FASTP.out.trimmed_reads)
+    // Taxonomic classification channel
+    ch_kraken = KRAKEN2(ch_processed.trimmed_reads)
 
-    // Alignment and SAM/BAM processing
-    ch_aligned = FASTP.out.trimmed_reads \
-        .combine(refs.basic) \
-        .map { meta, trimmed_reads, ref_id, ref ->
+    // Prepare channels for kraken outputs
+    ch_kraken_fixed = ch_kraken.report
+        .map { meta, report -> 
+            def classifications_file = file(report.toString().replace('.kraken2.report', '.kraken2.out'))
+            tuple(meta, classifications_file)
+        }
+
+    // Prepare channel for extraction of OROV reads
+    ch_for_extraction = ch_processed.trimmed_reads
+        .join(ch_kraken.report, by: 0)
+        .join(ch_kraken_fixed, by: 0)
+        .map { meta, trimmed_reads, kraken_report, kraken_out ->
+            tuple(meta, trimmed_reads, kraken_report, kraken_out)
+        }
+
+    // Filtered OROV reads channel 
+    ch_filtered = KRAKENTOOLS(ch_for_extraction)
+
+    // Alignment and SAM/BAM channels
+    ch_aligned = ch_filtered.filtered_reads
+        .combine(refs.basic)
+        .map { meta, filtered_reads, ref_id, ref ->
             def new_meta = [
                 id: "${meta.id}_${ref_id}",
                 sample_id: meta.id,
                 ref_id: ref_id
             ]
-            tuple(new_meta, trimmed_reads, ref)
+            tuple(new_meta, filtered_reads, ref)
         } \
         | BWA \
         | SAMTOOLS
 
-    // Variant calling
+    // Variant calling channel
     ch_variants = ch_aligned.indexed_bam
         .map { meta, sorted_bam, bai ->
             [meta.ref_id, meta, sorted_bam, bai]
@@ -104,7 +127,7 @@ workflow {
         } \
         | IVAR_VARIANTS
 
-    // Consensus generation and post-assembly QC
+    // Consensus generation and post-assembly QC channels
     ch_consensus = ch_aligned.indexed_bam
         .map { meta, sorted_bam, bai ->
             [meta.ref_id, meta, sorted_bam, bai]
@@ -126,8 +149,8 @@ workflow {
         | QUAST
 
     // Collect outputs for reporting
-    ch_fastp = FASTP.out.json.map { meta, json -> json }.collect()
-    ch_kraken2_out = KRAKEN2.out.report.map { meta, report -> report }.collect()
+    ch_fastp = ch_processed.json.map { meta, json -> json }.collect()
+    ch_kraken2_out = ch_kraken.report.map { meta, report -> report }.collect()
     ch_coverage = ch_aligned.coverage.map { meta, coverage -> coverage }.collect()
     ch_quast_stats = ch_quast.stats.map { meta, stats -> stats }.collect()
     ch_variants_out = ch_variants.variants.map { meta, variants -> variants }.collect()
