@@ -7,13 +7,8 @@ Although the sequences inlcuded in this pipeline are available in the public dom
   - The sequences in this repository are **not** curated RefSeq entries.
   - Some sequences may differ from RefSeq versions due to differences in submission details, sequencing methodologies, or subsequent updates.
   - Users are encouraged to verify sequence details and metadata directly from GenBank if high-level curation is required for their analysis.
-  - The pipeline currently supports only the references provided with it.
 
 ---
-
-## Attribution and Data Integrity
-
-The sequence data provided in this repository were obtained from GenBank and are in the public domain. In line with good scientific practice, we provide the following details for each sequence:
 
 ## GenBank Accession Numbers and Associated Publications
 
