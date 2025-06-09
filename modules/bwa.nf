@@ -3,7 +3,7 @@ process BWA {
     publishDir "${params.output_dir}/alignments", mode: 'copy'
 
     input:
-    tuple val(meta), path(trimmed_reads), path(reference)
+    tuple val(meta), path(filtered_reads), path(reference)
 
     output:
     tuple val(meta), path("${prefix}.sam"), emit: sam
@@ -18,7 +18,7 @@ process BWA {
     bwa mem \
         -t ${task.cpus} \
         ${reference} \
-        ${trimmed_reads[0]} ${trimmed_reads[1]} \
+        ${filtered_reads[0]} ${filtered_reads[1]} \
         > ${prefix}.sam
     """
 }
