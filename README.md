@@ -65,7 +65,12 @@ Note: Skipping HRRT may be appropriate for:
 
 ###### Please see the [notes](https://github.com/BPHL-Molecular/Juno/tree/main/references) on the reference genomes used in this pipeline.
 
-## 🛠️ Pipeline Modes
+## 🔄Workflow
+
+![Blank diagram](https://github.com/user-attachments/assets/dba15ff3-461e-4e16-938a-24d06d9a4595)
+
+
+## 🛠️ Pipeline Assembly Modes
 
 ### Reference-Based Assembly
 1. **Quality Control**
