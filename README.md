@@ -4,7 +4,6 @@ Juno is designed for processing Illumina paired-end sequencing data for OROV gen
 
 ## ⚡ Usage
 ```bash
-# Reference-based assembly
 $ nextflow run juno.nf -profile singularity -params-file params.yaml
 ```
 
@@ -68,7 +67,7 @@ Note: Skipping HRRT may be appropriate for:
 
 ## 🛠️ Pipeline Modes
 
-### Reference-Based Assembly (Default)
+### Reference-Based Assembly
 1. **Quality Control**
    - Human Read Removal - [`sra-human-scrubber`](https://github.com/ncbi/sra-human-scrubber)
    - Read QC and trimming - [`fastp`](https://github.com/OpenGene/fastp)
