@@ -11,7 +11,7 @@ process BWA {
     script:
     prefix = "${meta.id}"
     """
-    # Index reference
+    # Index references
     bwa index ${reference}
 
     # Align reads

@@ -1,6 +1,7 @@
 process SPADES {
     tag "$meta.id"
-    publishDir "${params.output_dir}/${meta.id}/assembly", mode: 'copy'
+    publishDir "${params.output_dir}/contigs", mode: 'copy'
+    errorStrategy 'ignore'
 
     input:
     tuple val(meta), path(filtered_reads)
@@ -19,12 +20,12 @@ process SPADES {
         -1 ${filtered_reads[0]} \\
         -2 ${filtered_reads[1]} \\
         --threads ${task.cpus} \\
-        --only-assembler \\
-        --careful \\
-        -o spades_output
+        --memory ${task.memory.toGiga()} \\
+        --isolate \\
+        --cov-cutoff auto \\
+        -o ${prefix}
 
-    # Copy main outputs with proper naming
-    cp spades_output/contigs.fasta ${prefix}_contigs.fasta
-    cp spades_output/spades.log ${prefix}_spades.log
+    mv ${prefix}/contigs.fasta ${prefix}_contigs.fasta
+    mv ${prefix}/spades.log ${prefix}_spades.log
     """
 }

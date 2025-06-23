@@ -10,7 +10,6 @@ process QUAST {
     tuple val(meta), path("${prefix}.report.tsv"), emit: stats
     tuple val(meta), path("${prefix}/transposed_report.tsv"), emit: transposed_report
 
-
     script:
     prefix = "${meta.id}_quast"
     """
@@ -19,7 +18,7 @@ process QUAST {
         -r ${reference} \
         -o ${prefix} \
         --threads ${task.cpus} \
-        --min-contig 500 \
+        --min-contig 1 \
         --no-plots \
         --no-html \
         --no-icarus
