@@ -3,19 +3,10 @@ input_dir: "/path/to/fastq"
 output_dir: "/path/to/juno_output"
 
 # Assembly strategy selection
-assembly_mode: "denovo"  # Options: "reference" or "denovo"
+assembly_mode: "reference"  # Options: "reference" or "denovo"
 
 # Kraken2 database path
 kraken2_db: "/path/to/kraken2_db"
 
-# Human read removal using NCBI's SRA human read removal tool (HRRT)
+# Skip human read removal using NCBI's SRA human read removal tool (HRRT)
 skip_hrrt: false
-
-# De novo assembly settings
-denovo_settings:
-    completeness_threshold: 80
-
-# Quality control thresholds
-qc_thresholds:
-    min_coverage: 90 # Minimum coverage percentage
-    min_depth: 15 # Minimum depth of coverage (x)

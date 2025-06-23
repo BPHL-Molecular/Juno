@@ -15,8 +15,8 @@ log.info """
     ==========================================================================
     input dir      : ${params.input_dir}
     output dir     : ${params.output_dir}
-    assembly mode  : ${params.assembly_mode}
     kraken2 db     : ${params.kraken2_db}
+    assembly mode  : ${params.assembly_mode}
     skip hrrt      : ${params.skip_hrrt}
     ==========================================================================
     """
@@ -39,6 +39,11 @@ Channel
     }
 
 // Reference channel
+ref_files_ch = Channel
+    .fromPath("${projectDir}/references/*.{fasta,fa}")
+    .ifEmpty { error "No reference files found in ${projectDir}/references" }
+    .collect()
+
 Channel
     .fromPath("${projectDir}/references/*.{fasta,fa}")
     .ifEmpty { error "No reference files found in ${projectDir}/references" }
@@ -55,6 +60,13 @@ Channel
     }
     .set { refs }
 
+// Reference segment mapping
+segment_ref_mapping = Channel.of(
+    ['L', 'PQ064919.1'],
+    ['M', 'PQ064920.1'], 
+    ['S', 'PQ064921.1']
+)
+
 // Log references
 refs.ids
     .collect()
@@ -63,23 +75,25 @@ refs.ids
     }
 
 // Modules
-include { HRRT }            from './modules/hrrt'
-include { FASTP }           from './modules/fastp'
-include { KRAKEN2 }         from './modules/kraken2'
-include { KRAKENTOOLS }     from './modules/krakentools'
-include { BWA }             from './modules/bwa'
-include { SAMTOOLS }        from './modules/samtools'
-include { IVAR_VARIANTS }   from './modules/ivar'
-include { IVAR_CONSENSUS }  from './modules/ivar'
-include { SPADES }          from './modules/spades'
-include { BLAST }           from './modules/blast'
-include { CLASSIFY_CONTIGS } from './modules/classify_contigs'
-include { QUAST }           from './modules/quast'
-include { SUMMARY_REPORT }  from './modules/summary_report'
-include { MULTIQC }         from './modules/multiqc'
+include { HRRT }                     from './modules/hrrt'
+include { FASTP }                    from './modules/fastp'
+include { KRAKEN2 }                  from './modules/kraken2'
+include { KRAKENTOOLS }              from './modules/krakentools'
+include { BWA }                      from './modules/bwa'
+include { SAMTOOLS }                 from './modules/samtools'
+include { IVAR_VARIANTS }            from './modules/ivar'
+include { IVAR_CONSENSUS }           from './modules/ivar'
+include { SPADES }                   from './modules/spades'
+include { MAKEBLASTDB }              from './modules/blast'
+include { BLAST }                    from './modules/blast'
+include { CLASSIFY_CONTIGS }         from './modules/classify_contigs'
+include { QUAST }                    from './modules/quast'
+include { SUMMARY_REPORT_REFERENCE } from './modules/summary_report'
+include { SUMMARY_REPORT_DENOVO }    from './modules/summary_report'
+include { MULTIQC }                  from './modules/multiqc'
 
 workflow {
-    // Initial QC channel and conditional human read removal process
+    // Initial QC and conditional human read removal channel
     if (params.skip_hrrt) {
         ch_processed = input_ch | FASTP
     } else {
@@ -111,21 +125,19 @@ workflow {
     if (params.assembly_mode == 'denovo') {
         // DE NOVO ASSEMBLY WORKFLOW
         
-        // Collect reference files for BLAST database
-        ch_ref_files = refs.files.collect()
+        // BLAST database channel
+        ch_blast_db = MAKEBLASTDB(ref_files_ch)
         
-        // De novo assembly
+        // De novo assembly channel
         ch_contigs = SPADES(ch_filtered.filtered_reads)
         
-        // BLAST classification
-        ch_blast = ch_contigs.contigs
-            .combine(ch_ref_files)
-            .map { meta, contigs, reference ->
-                tuple(meta, contigs, reference)
-            } \
-            | BLAST
+        // BLAST classification channel
+        ch_blast = BLAST(
+            ch_contigs.contigs,
+            ch_blast_db.db_files
+        )
         
-        // Classify contigs by segment
+        // Contig classification channel
         ch_classified = ch_contigs.contigs
             .join(ch_blast.blast_results, by: 0)
             .map { meta, contigs, blast_results ->
@@ -134,51 +146,40 @@ workflow {
             | CLASSIFY_CONTIGS
         
         // Prepare segments for QUAST
-        ch_quast = ch_classified.segment_L
-            .mix(ch_classified.segment_M, ch_classified.segment_S)
-            .filter { meta, segment_file ->
-                segment_file.size() > 0
+        ch_segments_for_quast = ch_classified.segment_L
+            .map { meta, segment_file -> 
+                tuple(meta, segment_file, 'L')
             }
-            .map { meta, segment_file ->
-                def segment_type = segment_file.name.contains('_L.fasta') ? 'L' : 
-                                  segment_file.name.contains('_M.fasta') ? 'M' : 'S'
+            .mix(
+                ch_classified.segment_M.map { meta, segment_file -> 
+                    tuple(meta, segment_file, 'M')
+                },
+                ch_classified.segment_S.map { meta, segment_file -> 
+                    tuple(meta, segment_file, 'S')
+                }
+            )
+            .filter { meta, segment_file, segment_type ->
+                segment_file.size() > 50
+            }
+            .map { meta, segment_file, segment_type ->
                 [segment_type, meta, segment_file]
             }
+            .combine(segment_ref_mapping, by: 0)
+            .map { segment_type, meta, segment_file, ref_id ->
+                [ref_id, meta, segment_file, segment_type]
+            }
             .combine(refs.basic, by: 0)
-            .map { segment_type, meta, segment_file, ref ->
+            .map { ref_id, meta, segment_file, segment_type, ref_file ->
                 def new_meta = [
                     id: "${meta.id}_${segment_type}",
                     sample_id: meta.id,
                     ref_id: segment_type
                 ]
-                tuple(new_meta, segment_file, ref)
-            } \
-            | QUAST
-
-        // Collect outputs for reporting
-        ch_fastp = ch_processed.json.map { meta, json -> json }.collect()
-        ch_kraken2_out = ch_kraken.report.map { meta, report -> report }.collect()
-        ch_coverage = Channel.empty()
-        ch_quast_stats = ch_quast.stats.map { meta, stats -> stats }.collect()
-        ch_variants_out = Channel.empty()
-        ch_consensus_out = ch_classified.segment_L
-            .mix(ch_classified.segment_M, ch_classified.segment_S)
-            .map { meta, segment -> segment }
-            .collect()
-        ch_classification_out = ch_classified.classification_summary
-            .map { meta, summary -> summary }
-            .collect()
-
-        // Generate summary report
-        SUMMARY_REPORT(
-            ch_fastp,
-            ch_kraken2_out,
-            ch_coverage,
-            ch_quast_stats,
-            ch_variants_out,
-            ch_consensus_out,
-            ch_classification_out
-        ) | MULTIQC
+                tuple(new_meta, segment_file, ref_file)
+            }
+        
+        // Assembly evaluation channel
+        ch_quast = ch_segments_for_quast | QUAST
 
     } else {
         // REFERENCE-BASED ASSEMBLY WORKFLOW
@@ -228,24 +229,42 @@ workflow {
                 tuple(meta, cons, ref)
             } \
             | QUAST
+    }
 
-        // Collect outputs for reporting
-        ch_fastp = ch_processed.json.map { meta, json -> json }.collect()
-        ch_kraken2_out = ch_kraken.report.map { meta, report -> report }.collect()
+    // Summary report channels
+    ch_fastp = ch_processed.json.map { meta, json -> json }.collect()
+    ch_kraken2_out = ch_kraken.report.map { meta, report -> report }.collect()
+
+    if (params.assembly_mode == 'denovo') {
+        // De novo summary report
+        ch_quast_stats = ch_quast.stats.map { meta, stats -> stats }.collect()
+        ch_classification_out = ch_classified.classification_summary.map { meta, summary -> summary }.collect()
+        
+        SUMMARY_REPORT_DENOVO(
+            ch_fastp,
+            ch_kraken2_out,
+            ch_quast_stats,
+            ch_classification_out
+        )
+        
+        SUMMARY_REPORT_DENOVO.out.summary | MULTIQC
+        
+    } else {
+        // Reference-based summary report
         ch_coverage = ch_aligned.coverage.map { meta, coverage -> coverage }.collect()
         ch_quast_stats = ch_quast.stats.map { meta, stats -> stats }.collect()
         ch_variants_out = ch_variants.variants.map { meta, variants -> variants }.collect()
         ch_consensus_out = ch_consensus.consensus.map { meta, consensus -> consensus }.collect()
-
-        // Generate summary report
-        SUMMARY_REPORT(
+        
+        SUMMARY_REPORT_REFERENCE(
             ch_fastp,
             ch_kraken2_out,
             ch_coverage,
             ch_quast_stats,
             ch_variants_out,
-            ch_consensus_out,
-            Channel.empty()
-        ) | MULTIQC
+            ch_consensus_out
+        )
+        
+        SUMMARY_REPORT_REFERENCE.out.summary | MULTIQC
     }
 }
