@@ -1,6 +1,5 @@
 process KRAKEN2 {
     tag "${meta.id}"
-
     publishDir "${params.output_dir}/kraken2", mode: 'copy'
 
     input:
