@@ -63,8 +63,6 @@ Note: Skipping HRRT may be appropriate for:
 - Pre-cleaned datasets
 - Testing/development workflows
 
-###### Please see the [notes](https://github.com/BPHL-Molecular/Juno/tree/main/references) on the reference genomes used in this pipeline.
-
 ## 🔄Workflow
 
 ![Blank diagram](https://github.com/user-attachments/assets/dba15ff3-461e-4e16-938a-24d06d9a4595)
@@ -88,6 +86,8 @@ Note: Skipping HRRT may be appropriate for:
 5. **Aggregate and Summarize Results**
    - Aggregate results from bioinformatics analyses - [`multiqc`](https://github.com/MultiQC/MultiQC)
    - Summary report generation with QC pass/fail status
+###### Please see the [notes](https://github.com/BPHL-Molecular/Juno/tree/main/references) on the reference genomes used in this workflow.
+
 
 ### De Novo Assembly Mode
 1. **Quality Control**
