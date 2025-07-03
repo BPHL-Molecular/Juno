@@ -63,7 +63,7 @@ Note: Skipping HRRT may be appropriate for:
 - Pre-cleaned datasets
 - Testing/development workflows
 
-## 🔄Workflow
+## 🔄 Workflow Diagram
 
 ![Blank diagram](https://github.com/user-attachments/assets/dba15ff3-461e-4e16-938a-24d06d9a4595)
 
