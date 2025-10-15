@@ -1,12 +1,11 @@
-process FASTP {
+process FASTP_REPORT {
     tag "${meta.id}"
-    publishDir "${params.output_dir}/trimmed", mode: 'copy'
+    publishDir "${params.output_dir}/fastp", mode: 'copy'
 
     input:
-    tuple val(meta), path(dehosted_reads)
+    tuple val(meta), path(reads)
 
     output:
-    tuple val(meta), path("${prefix}_R{1,2}_trimmed.fastq.gz"), emit: trimmed_reads
     tuple val(meta), path("${prefix}.fastp.json"), emit: json
     path "${prefix}.fastp.html", emit: html
 
@@ -14,16 +13,18 @@ process FASTP {
     prefix = "${meta.id}"
     """
     fastp \
-        --in1 ${dehosted_reads[0]} \
-        --in2 ${dehosted_reads[1]} \
-        --out1 ${prefix}_R1_trimmed.fastq.gz \
-        --out2 ${prefix}_R2_trimmed.fastq.gz \
+        --in1 ${reads[0]} \
+        --in2 ${reads[1]} \
+        --out1 ${prefix}_R1_report_only.fastq.gz \
+        --out2 ${prefix}_R2_report_only.fastq.gz \
         --json ${prefix}.fastp.json \
         --html ${prefix}.fastp.html \
-        --qualified_quality_phred 20 \
-        --length_required 50 \
-        --cut_window_size 4 \
-        --cut_mean_quality 20 \
+        --disable_adapter_trimming \
+        --disable_quality_filtering \
+        --disable_length_filtering \
         --thread ${task.cpus}
+    
+    # Remove the temporary output files
+    rm ${prefix}_R1_report_only.fastq.gz ${prefix}_R2_report_only.fastq.gz
     """
 }

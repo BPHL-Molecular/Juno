@@ -2,11 +2,14 @@
 input_dir: "/path/to/fastq"
 output_dir: "/path/to/juno_output"
 
-# Assembly strategy selection
-assembly_mode: "reference"  # Options: "reference" or "denovo"
+# Assembly strategy selection, options: "reference" or "denovo"
+assembly_mode: "denovo"
 
 # Kraken2 database path
-kraken2_db: "/path/to/kraken2_db"
+kraken2_db: "/path/to/kraken2/database/"
 
 # Skip human read removal using NCBI's SRA human read removal tool (HRRT)
 skip_hrrt: false
+
+# Assembly polishing with Pilon (only used in denovo mode)
+polish_contigs: true

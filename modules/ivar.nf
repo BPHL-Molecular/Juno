@@ -1,20 +1,21 @@
 process IVAR_VARIANTS {
     tag "${meta.id}"
     publishDir "${params.output_dir}/variants", mode: 'copy'
+    errorStrategy 'ignore'
 
     input:
-    tuple val(meta), path(sorted_bam), path(bai), path(reference), path(gff)
+    tuple val(meta), path(dedup_bam), path(bai), path(reference), path(gff)
 
     output:
-    tuple val(meta), path("${prefix}.variants.tsv"), emit: variants
+    tuple val(meta), path("${prefix}.variants.tsv"), optional: true, emit: variants
 
     script:
     prefix = "${meta.id}"
     """
     samtools mpileup \
-        -aa -A -d 1000 -B -Q 0 \
+        -aa -A -d 100 -B -Q 0 \
         -f ${reference} \
-        ${sorted_bam} | \
+        ${dedup_bam} | \
     ivar variants \
         -p ${prefix} \
         -r ${reference} \
@@ -29,21 +30,22 @@ process IVAR_VARIANTS {
 process IVAR_CONSENSUS {
     tag "${meta.id}"
     publishDir "${params.output_dir}/consensus", mode: 'copy'
+    errorStrategy 'ignore'
 
     input:
-    tuple val(meta), path(sorted_bam), path(bai), path(reference)
+    tuple val(meta), path(dedup_bam), path(bai), path(reference)
 
     output:
-    tuple val(meta), path("${prefix}.consensus.fasta"), emit: consensus
-    tuple val(meta), path("${prefix}.consensus.fasta"), val(meta.ref_id), emit: consensus_with_ref
+    tuple val(meta), path("${prefix}.consensus.fasta"), optional: true, emit: consensus
+    tuple val(meta), path("${prefix}.consensus.fasta"), val(meta.ref_id), optional: true, emit: consensus_with_ref
 
     script:
     prefix = "${meta.id}"
     """
     samtools mpileup \
-        -aa -A -d 1000 -B -Q 0 \
+        -aa -A -d 100 -B -Q 0 \
         -f ${reference} \
-        ${sorted_bam} | \
+        ${dedup_bam} | \
     ivar consensus \
         -p ${prefix} \
         -q 20 \
@@ -51,9 +53,7 @@ process IVAR_CONSENSUS {
         -n N
 
     # Format the consensus FASTA with proper line wrapping
-    if [ -f "${prefix}.fa" ]; then
-        echo ">${prefix}" > "${prefix}.consensus.fasta"
-        grep -v ">" "${prefix}.fa" | fold -w 70 >> "${prefix}.consensus.fasta"
-    fi
+    echo ">${prefix}" > "${prefix}.consensus.fasta"
+    grep -v ">" "${prefix}.fa" | fold -w 70 >> "${prefix}.consensus.fasta"
     """
 }

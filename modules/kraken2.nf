@@ -3,7 +3,7 @@ process KRAKEN2 {
     publishDir "${params.output_dir}/kraken2", mode: 'copy'
 
     input:
-    tuple val(meta), path(trimmed_reads)
+    tuple val(meta), path(reads)
 
     output:
     tuple val(meta), path("${prefix}.kraken2.report"), emit: report
@@ -18,6 +18,6 @@ process KRAKEN2 {
         --paired \
         --report ${prefix}.kraken2.report \
         --output ${prefix}.kraken2.out \
-        ${trimmed_reads[0]} ${trimmed_reads[1]}
+        ${reads[0]} ${reads[1]}
     """
 }
