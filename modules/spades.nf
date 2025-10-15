@@ -1,6 +1,6 @@
 process SPADES {
     tag "$meta.id"
-    publishDir "${params.output_dir}/contigs", mode: 'copy'
+    publishDir "${params.output_dir}/spades", mode: 'copy'
     errorStrategy 'ignore'
 
     input:
@@ -17,8 +17,9 @@ process SPADES {
     prefix = "${meta.id}"
     """
     spades.py \\
-        -1 ${filtered_reads[0]} \\
-        -2 ${filtered_reads[1]} \\
+        --pe1-1 ${filtered_reads[0]} \\
+        --pe1-2 ${filtered_reads[1]} \\
+        --pe1-fr \\
         --threads ${task.cpus} \\
         --memory ${task.memory.toGiga()} \\
         --isolate \\

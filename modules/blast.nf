@@ -1,6 +1,6 @@
 process MAKEBLASTDB {
     tag "OROV_References"
-    publishDir "${params.output_dir}/blast_db", mode: 'copy'
+    publishDir "${params.output_dir}/blast/blast_db", mode: 'copy'
 
     input:
     path(references)

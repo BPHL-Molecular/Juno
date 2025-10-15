@@ -1,12 +1,15 @@
 # Input/Output paths
-input_dir: "/path/to/fastq"
-output_dir: "/path/to/juno_output"
+input_dir: "/blue/bphl-florida/arnold.rodriguez/repositories/arodzh-sudo/Juno/fastq"
+output_dir: "/blue/bphl-florida/arnold.rodriguez/repositories/arodzh-sudo/Juno/juno_updatev6_reference"
 
-# Assembly strategy selection
-assembly_mode: "reference"  # Options: "reference" or "denovo"
+# Assembly strategy selection, options: "reference" or "denovo"
+assembly_mode: "reference"
 
 # Kraken2 database path
-kraken2_db: "/path/to/kraken2_db"
+kraken2_db: "/blue/bphl-florida/arnold.rodriguez/databases/kraken2/k2_orov_20250220/"
 
 # Skip human read removal using NCBI's SRA human read removal tool (HRRT)
 skip_hrrt: false
+
+# Assembly polishing with Pilon (only used in denovo mode)
+polish_contigs: false

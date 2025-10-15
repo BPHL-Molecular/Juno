@@ -3,12 +3,14 @@ process SUMMARY_REPORT_REFERENCE {
     publishDir "${params.output_dir}", mode: 'copy'
 
     input:
+        file fastq_scan_files
         file fastp_files
         file kraken2_files
         file coverage_files
         file quast_dirs
         file variants_files
         file consensus_files
+        file markdup_stats_files
 
     output:
         path "summary_report.tsv", emit: summary
@@ -22,7 +24,7 @@ process SUMMARY_REPORT_REFERENCE {
 import os, glob, json
 
 def get_orov_reads(kraken_report):
-    \"\"\"Get OROV reads count from kraken2 report - using parent taxon count.\"\"\"
+    """Get OROV reads count from kraken2 report - using parent taxon count."""
     try:
         with open(kraken_report) as f:
             for line in f:
@@ -33,7 +35,36 @@ def get_orov_reads(kraken_report):
         print(f"Error processing kraken report {kraken_report}: {e}")
     return 0
 
-# Index fastp files
+def get_duplicate_percent(markdup_stats_file):
+    """Extract duplicate percentage from samtools markdup stats file."""
+    try:
+        duplicate_total = 0
+        written_total = 0
+        
+        with open(markdup_stats_file, 'r') as f:
+            for line in f:
+                if "DUPLICATE TOTAL:" in line:
+                    parts = line.strip().split(":")
+                    if len(parts) >= 2:
+                        duplicate_total = int(parts[1].strip())
+                elif "WRITTEN:" in line:
+                    parts = line.strip().split(":")
+                    if len(parts) >= 2:
+                        written_total = int(parts[1].strip())
+        
+        if written_total > 0:
+            return (duplicate_total / written_total) * 100
+    except Exception as e:
+        print(f"Error processing markdup stats file {markdup_stats_file}: {e}")
+    return 0.0
+
+# Index fastq-scan files (raw read counts)
+fastq_scan_dict = {}
+for f in glob.glob("*.fastq-scan.json"):
+    sample_id = f.replace(".fastq-scan.json", "")
+    fastq_scan_dict[sample_id] = f
+
+# Index fastp files (clean read counts)
 fastp_dict = {}
 for f in glob.glob("*.fastp.json"):
     sample_id = f.replace(".fastp.json", "")
@@ -69,6 +100,12 @@ for f in glob.glob("*_quast.report.tsv"):
     key = f.replace("_quast.report.tsv", "")
     quast_dict[key] = f
 
+# Index markdup stats files
+markdup_stats_dict = {}
+for f in glob.glob("*_markdup_stats.txt"):
+    key = f.replace("_markdup_stats.txt", "")
+    markdup_stats_dict[key] = f
+
 # QC thresholds
 min_coverage = 90.0
 min_depth = 15.0
@@ -76,7 +113,7 @@ high_n_threshold = 5.0
 
 # Prepare output
 header = ["sampleID", "reference", "num_raw_reads", "num_clean_reads", "kraken2_reads",
-          "num_mapped_reads", "percent_mapped_clean_reads", "mean_base_qual", "mean_map_qual",
+          "num_mapped_reads", "percent_mapped_clean_reads", "duplicate_percent", "mean_base_qual", "mean_map_qual",
           "percent_reference_covered", "mean_ref_depth", "reference_length", "assembly_length",
           "num_variants", "total_n_bases", "qc_pass_fail"]
 out_lines = ["\t".join(header)]
@@ -92,9 +129,16 @@ for composite_key in sorted(coverage_dict.keys()):
     if sample_id not in fastp_dict:
         continue
 
+    # Get raw reads from fastq-scan
+    num_raw_reads = 0
+    if sample_id in fastq_scan_dict:
+        with open(fastq_scan_dict[sample_id]) as f:
+            fastq_scan_data = json.load(f)
+            num_raw_reads = fastq_scan_data["qc_stats"]["read_total"]
+
+    # Get clean reads from fastp
     with open(fastp_dict[sample_id]) as f:
         fastp_data = json.load(f)
-        num_raw_reads = fastp_data["summary"]["before_filtering"]["total_reads"]
         num_clean_reads = fastp_data["summary"]["after_filtering"]["total_reads"]
 
     kraken2_reads = 0
@@ -150,6 +194,11 @@ for composite_key in sorted(coverage_dict.keys()):
     else:
         qc_pass_fail = "PASS"
 
+    # Get duplicate percentage
+    duplicate_percent = 0.0
+    if composite_key in markdup_stats_dict:
+        duplicate_percent = get_duplicate_percent(markdup_stats_dict[composite_key])
+
     # Create output row
     row = [
         composite_key,
@@ -159,6 +208,7 @@ for composite_key in sorted(coverage_dict.keys()):
         str(kraken2_reads),
         str(int(num_mapped_reads)),
         f"{percent_mapped_clean_reads:.2f}",
+        f"{duplicate_percent:.2f}",
         f"{mean_base_qual:.1f}",
         f"{mean_map_qual:.1f}",
         f"{percent_reference_covered:.1f}",
@@ -182,10 +232,13 @@ process SUMMARY_REPORT_DENOVO {
     publishDir "${params.output_dir}", mode: 'copy'
 
     input:
+        file fastq_scan_files
         file fastp_files
         file kraken2_files
         file quast_dirs
         file classification_files
+        file validation_coverage_files
+        file validation_flagstat_files
 
     output:
         path "summary_report.tsv", emit: summary
@@ -199,7 +252,7 @@ process SUMMARY_REPORT_DENOVO {
 import os, glob, json
 
 def get_orov_reads(kraken_report):
-    \"\"\"Get OROV reads count from kraken2 report - using parent taxon count.\"\"\"
+    """Get OROV reads count from kraken2 report - using parent taxon count."""
     try:
         with open(kraken_report) as f:
             for line in f:
@@ -211,7 +264,7 @@ def get_orov_reads(kraken_report):
     return 0
 
 def get_classification_stats(classification_file):
-    \"\"\"Extract classification statistics from de novo classification summary.\"\"\"
+    """Extract classification statistics from de novo classification summary."""
     stats = {'L': 0, 'M': 0, 'S': 0, 'unassigned': 0}
     try:
         with open(classification_file, 'r') as f:
@@ -252,7 +305,7 @@ def get_classification_stats(classification_file):
     return stats
 
 def get_blast_quality_from_classification(classification_file, segment):
-    \"\"\"Extract BLAST quality metrics for a specific segment from classification summary.\"\"\"
+    """Extract BLAST quality metrics for a specific segment from classification summary."""
     try:
         with open(classification_file, 'r') as f:
             in_details = False
@@ -276,51 +329,207 @@ def get_blast_quality_from_classification(classification_file, segment):
     return 0, 0
 
 def get_assembly_status(segment, classification_stats, quast_data):
-    \"\"\"Determine assembly status for de novo assembly.\"\"\"
+    """Determine assembly status for de novo assembly with quality assessment."""
     
-    # Check if segment was assembled
+    # Check 1: Are there contigs classified to this segment?
     if classification_stats[segment] == 0:
         return "NO_ASSEMBLY"
     
-    # Check if we have assembly data
-    assembly_length = quast_data.get('assembly_length', 0)
-    if assembly_length == 0:
+    # Check 2: Does QUAST have valid largest_contig?
+    largest_contig = quast_data.get('largest_contig', 0)
+    if largest_contig == 0:
         return "NO_ASSEMBLY"
     
-    return "ASSEMBLED"
+    # Check 3: Quality assessment - compare largest contig to reference length
+    reference_length = quast_data.get('reference_length', 0)
+    length_ratio = (largest_contig / reference_length) * 100
+    
+    # Accept assemblies where largest contig is 90-150% of reference length
+    if 90.0 <= length_ratio <= 150.0:
+        return "ASSEMBLED"
+    else:
+        return "FRAGMENTED"
 
-# Index files
+def get_validation_stats(coverage_file, flagstat_file):
+    """Extract overall validation statistics from coverage and flagstat files."""
+    stats = {'percent_mapped': 0.0, 'mean_depth': 0.0, 'mapped_reads': 0, 'total_reads': 0}
+    
+    try:
+        # Process flagstat file for overall mapping stats
+        with open(flagstat_file, 'r') as f:
+            for line in f:
+                if "mapped (" in line and "primary" not in line:
+                    fields = line.strip().split()
+                    stats['mapped_reads'] = int(fields[0])
+                    stats['percent_mapped'] = float(fields[4].strip('()%'))
+                elif "in total" in line:
+                    fields = line.strip().split()
+                    stats['total_reads'] = int(fields[0])
+    except Exception as e:
+        print(f"Error processing validation files: {e}")
+        
+    return stats
+
+def get_contigs_by_segment(classification_file):
+    """Extract mapping of contigs to segments from classification summary file."""
+    segment_contigs = {'L': [], 'M': [], 'S': [], 'unassigned': []}
+    
+    try:
+        with open(classification_file, 'r') as f:
+            in_details = False
+            for line in f:
+                line = line.strip()
+                if line.startswith('Detailed Classification:'):
+                    in_details = True
+                    continue
+                elif in_details and line and not line.startswith('Contig_ID'):
+                    parts = line.split('\t')
+                    if len(parts) >= 4:
+                        contig_id = parts[0].strip()
+                        segment = parts[1].strip()
+                        if segment in segment_contigs:
+                            segment_contigs[segment].append(contig_id)
+    except Exception as e:
+        print(f"Error parsing classification file {classification_file}: {e}")
+    
+    return segment_contigs
+
+def parse_coverage_by_contig(coverage_file):
+    """Parse coverage data by contig from samtools coverage output."""
+    contig_coverage = {}
+    
+    try:
+        with open(coverage_file, 'r') as f:
+            for line in f:
+                if not line.startswith('#'):
+                    fields = line.strip().split('\t')
+                    if len(fields) >= 7:
+                        contig_id = fields[0].strip()
+                        coverage_pct = float(fields[5])
+                        mean_depth = float(fields[6])
+                        num_reads = int(fields[3])
+                        contig_coverage[contig_id] = {
+                            'coverage_pct': coverage_pct,
+                            'mean_depth': mean_depth,
+                            'num_reads': num_reads
+                        }
+    except Exception as e:
+        print(f"Error parsing coverage file {coverage_file}: {e}")
+    
+    return contig_coverage
+
+def calculate_segment_validation_stats(segment_contigs, contig_coverage, flagstat_data):
+    """Calculate validation statistics per segment based on contig assignments."""
+    segment_stats = {}
+    total_mapped_reads = flagstat_data.get('mapped_reads', 0)
+    
+    for segment, contigs in segment_contigs.items():
+        if segment != 'unassigned' and contigs:
+            # Strip _pilon suffix from contig names to match validation coverage file
+            # Classification uses polished names, validation uses original SPAdes names
+            contigs_no_suffix = [contig.replace('_pilon', '') for contig in contigs]
+            
+            # Sum metrics for all contigs in this segment
+            segment_reads = sum(contig_coverage.get(contig, {}).get('num_reads', 0) for contig in contigs_no_suffix)
+            
+            # Extract lengths from contig IDs (use original contig names without suffix)
+            contig_lengths = {}
+            for contig in contigs_no_suffix:
+                parts = contig.split('_')
+                if len(parts) > 3 and 'length' in parts[2]:
+                    try:
+                        contig_lengths[contig] = int(parts[3])
+                    except (ValueError, IndexError):
+                        contig_lengths[contig] = 0
+            
+            total_length = sum(contig_lengths.values())
+            
+            # Calculate weighted average depth
+            weighted_depth = 0
+            if total_length > 0:
+                for contig in contigs_no_suffix:
+                    if contig in contig_coverage and contig in contig_lengths:
+                        weighted_depth += contig_coverage[contig]['mean_depth'] * (contig_lengths[contig] / total_length)
+            
+            # Calculate percentage of reads mapped to this segment
+            segment_pct = (segment_reads / total_mapped_reads * 100) if total_mapped_reads > 0 else 0
+            
+            segment_stats[segment] = {
+                'mapped_reads': segment_reads,
+                'percent_mapped': segment_pct,
+                'mean_depth': weighted_depth
+            }
+        else:
+            # Default values for segments with no contigs
+            segment_stats[segment] = {
+                'mapped_reads': 0,
+                'percent_mapped': 0.0,
+                'mean_depth': 0.0
+            }
+    
+    return segment_stats
+
+# Index fastq-scan files (raw read counts)
+fastq_scan_dict = {}
+for f in glob.glob("*.fastq-scan.json"):
+    sample_id = f.replace(".fastq-scan.json", "")
+    fastq_scan_dict[sample_id] = f
+
+# Index fastp files (clean read counts)
 fastp_dict = {}
 for f in glob.glob("*.fastp.json"):
     sample_id = f.replace(".fastp.json", "")
     fastp_dict[sample_id] = f
 
+# Index kraken2 files
 kraken2_dict = {}
 for f in glob.glob("*.kraken2.report"):
     sample_id = f.replace(".kraken2.report", "")
     kraken2_dict[sample_id] = f
 
+# Index classification files
 classification_dict = {}
 for f in glob.glob("*_classification_summary.txt"):
     sample_id = f.replace("_classification_summary.txt", "")
     classification_dict[sample_id] = f
 
+# Index quast files
 quast_dict = {}
 for f in glob.glob("*_quast.report.tsv"):
     key = f.replace("_quast.report.tsv", "")
     quast_dict[key] = f
 
+# Index validation files
+validation_coverage_dict = {}
+for f in glob.glob("*_validation_coverage.txt"):
+    sample_id = f.replace("_validation_coverage.txt", "")
+    validation_coverage_dict[sample_id] = f
+
+validation_flagstat_dict = {}
+for f in glob.glob("*_validation_flagstat.txt"):
+    sample_id = f.replace("_validation_flagstat.txt", "")
+    validation_flagstat_dict[sample_id] = f
+
 # Prepare output
 header = ["sampleID", "segment", "num_raw_reads", "num_clean_reads", "kraken2_reads",
           "num_contigs_L", "num_contigs_M", "num_contigs_S",
-          "assembly_length", "reference_length", "na50", "blast_identity", "blast_coverage", "assembly_status"]
+          "largest_contig", "reference_length", "na50", "blast_identity", "blast_coverage", 
+          "validation_mapped_reads", "validation_percent_mapped", "validation_mean_depth",
+          "assembly_status"]
 out_lines = ["\t".join(header)]
 
 # Process each sample
 for sample_id in sorted(fastp_dict.keys()):
+    # Get raw reads from fastq-scan
+    num_raw_reads = 0
+    if sample_id in fastq_scan_dict:
+        with open(fastq_scan_dict[sample_id]) as f:
+            fastq_scan_data = json.load(f)
+            num_raw_reads = fastq_scan_data["qc_stats"]["read_total"]
+
+    # Get clean reads from fastp
     with open(fastp_dict[sample_id]) as f:
         fastp_data = json.load(f)
-        num_raw_reads = fastp_data["summary"]["before_filtering"]["total_reads"]
         num_clean_reads = fastp_data["summary"]["after_filtering"]["total_reads"]
 
     kraken2_reads = 0
@@ -331,6 +540,31 @@ for sample_id in sorted(fastp_dict.keys()):
     if sample_id in classification_dict:
         classification_stats = get_classification_stats(classification_dict[sample_id])
 
+    # Get contig-to-segment mappings
+    segment_contigs = {'L': [], 'M': [], 'S': [], 'unassigned': []}
+    if sample_id in classification_dict:
+        segment_contigs = get_contigs_by_segment(classification_dict[sample_id])
+    
+    # Get contig-specific coverage data
+    contig_coverage = {}
+    if sample_id in validation_coverage_dict:
+        contig_coverage = parse_coverage_by_contig(validation_coverage_dict[sample_id])
+    
+    # Get overall validation stats from flagstat
+    overall_validation_stats = {'mapped_reads': 0, 'total_reads': 0, 'percent_mapped': 0.0}
+    if sample_id in validation_flagstat_dict and sample_id in validation_coverage_dict:
+        overall_validation_stats = get_validation_stats(
+            validation_coverage_dict[sample_id],
+            validation_flagstat_dict[sample_id]
+        )
+    
+    # Calculate segment-specific validation statistics
+    segment_validation = calculate_segment_validation_stats(
+        segment_contigs,
+        contig_coverage,
+        overall_validation_stats
+    )
+    
     for segment in ['L', 'M', 'S']:
         segment_key = f"{sample_id}_{segment}"
         
@@ -340,8 +574,8 @@ for sample_id in sorted(fastp_dict.keys()):
                 for line in f:
                     if "Reference length" in line:
                         quast_data['reference_length'] = int(line.strip().split("\t")[1])
-                    elif line.startswith("Total length"):
-                        quast_data['assembly_length'] = int(line.strip().split("\t")[1])
+                    elif line.startswith("Largest contig"):
+                        quast_data['largest_contig'] = int(line.strip().split("\t")[1])
                     elif "NA50" in line and not "NGA50" in line:
                         quast_data['na50'] = int(line.strip().split("\t")[1])
 
@@ -356,7 +590,10 @@ for sample_id in sorted(fastp_dict.keys()):
         num_contigs_L = classification_stats['L'] if segment == 'L' else 0
         num_contigs_M = classification_stats['M'] if segment == 'M' else 0
         num_contigs_S = classification_stats['S'] if segment == 'S' else 0
-
+        
+        # Use segment-specific validation metrics
+        segment_validation_data = segment_validation.get(segment, {'mapped_reads': 0, 'percent_mapped': 0.0, 'mean_depth': 0.0})
+        
         row = [
             sample_id,
             segment,
@@ -366,11 +603,14 @@ for sample_id in sorted(fastp_dict.keys()):
             str(num_contigs_L),
             str(num_contigs_M),
             str(num_contigs_S),
-            str(quast_data.get('assembly_length', 0)),
+            str(quast_data.get('largest_contig', 0)),
             str(quast_data.get('reference_length', 0)),
             str(quast_data.get('na50', 0)),
             f"{blast_identity:.1f}",
             f"{blast_coverage:.1f}",
+            f"{int(segment_validation_data['mapped_reads'])}",
+            f"{segment_validation_data['percent_mapped']:.2f}",
+            f"{segment_validation_data['mean_depth']:.2f}",
             assembly_status
         ]
 
