@@ -88,14 +88,14 @@ flowchart TD
     BWA --> Samtools[SAMTOOLS<br/>BAM Processing]
     Samtools --> IvarVariants[IVAR<br/>Variant Calling]
     Samtools --> IvarConsensus[IVAR<br/>Consensus Generation]
-    IvarConsensus --> QuastRef[QUAST<br/>Consensus Assembly Evaluation]
+    IvarConsensus --> QuastRef[QUAST<br/>Assembly Evaluation]
     QuastRef --> SummaryRef[Summary Report<br/>Reference Mode]
     
     ModeCheck -->|De Novo| Spades[SPADES<br/>De Novo Assembly]
-    Spades --> PolishCheck{Polish Contigs?}
-    PolishCheck -->|Yes| BwaValidate[BWA<br/>Validate Assembly]
+    Spades --> BwaValidate[BWA<br/>Validate Assembly]
     BwaValidate --> SamtoolsDenovo[SAMTOOLS<br/>Validation Stats]
-    SamtoolsDenovo --> Pilon[PILON<br/>Polish Assembly]
+    SamtoolsDenovo --> PolishCheck{Polish Contigs?}
+    PolishCheck -->|Yes| Pilon[PILON<br/>Polish Assembly]
     Pilon --> TrimTerminals[Trim Low-Coverage<br/>Terminal Regions]
     TrimTerminals --> Blast[BLAST<br/>Classify Contigs]
     PolishCheck -->|No| Blast
@@ -146,19 +146,21 @@ flowchart TD
 ### De Novo Assembly Mode
 3. **De Novo Assembly**
    - Genome assembly - [`spades`](https://github.com/ablab/spades)
+   - Contig validation alignment - [`bwa`](https://github.com/lh3/bwa)
+   - BAM processing - [`samtools`](https://github.com/samtools/samtools)
+4. **Assembly Polishing (Optional)**
+   - Polish assembly - [`pilon`](https://github.com/broadinstitute/pilon)
+   - Trim low-coverage terminals - Custom Python script
+5. **Contig Classification**
    - Reference database creation - [`makeblastdb`](https://blast.ncbi.nlm.nih.gov/doc/blast-help/downloadblastdata.html)
    - Contig classification - [`blastn`](https://blast.ncbi.nlm.nih.gov/doc/blast-help/)
    - Segment assignment and formatting
-4. **Assembly Polishing (Optional)**
-   - Contig validation alignment - [`bwa`](https://github.com/lh3/bwa)
-   - BAM processing - [`samtools`](https://github.com/samtools/samtools)
-   - Polish assembly - [`pilon`](https://github.com/broadinstitute/pilon)
-   - Trim low-coverage terminals - Custom Python script
-5. **Quality Assessment**
-   - Assembly evaluation - [`quast`](https://github.com/ablab/quast) (per segment)
-6. **Aggregate and Summarize Results**
+6. **Quality Assessment**
+   - Assembly evaluation - [`quast`](https://github.com/ablab/quast)
+7. **Aggregate and Summarize Results**
    - Aggregate results from bioinformatics analyses - [`multiqc`](https://github.com/MultiQC/MultiQC)
    - Summary report generation with assembly status
+
 
 ## 📂 Output Structure
 
@@ -289,3 +291,4 @@ We welcome contributions to make Juno better! Feel free to open issues or submit
 
 ## ⚖️ License
 Juno is licensed under the [MIT License](LICENSE).
+
