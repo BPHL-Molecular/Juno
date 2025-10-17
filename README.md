@@ -23,19 +23,36 @@ $ sbatch ./juno.sh
 #### 1. Clone this repository
 
 ```bash
-git clone https://github.com/BPHL-Molecular/Juno.git
-cd Juno
+$ git clone https://github.com/BPHL-Molecular/Juno.git
+$ cd Juno
 ```
 
 #### 2. Create a directory for Input FASTQ Files
 
 ```bash
-mkdir fastq
+$ mkdir fastq
 # move or copy your FASTQ files into this directory
 ```
 **Note:** FASTQ files must follow the Illumina naming format: `*_L001_R{1,2}_*.fastq.gz` (e.g., `sample_name_L001_R1_001.fastq.gz` and `sample_name_L001_R2_001.fastq.gz`)
 
-#### 3. Set required parameters:
+
+#### 3. (Optional) Conda Environment Installation
+
+```bash
+# Create conda environment
+$ git clone https://github.com/BPHL-Molecular/Juno.git
+$ cd Juno
+$ conda env create -f environment.yml
+
+# Activate and run environment
+$ conda activate juno
+$ nextflow run juno.nf -profile conda -params-file params.yaml
+```
+
+**Conda Limitation:** The NCBI SRA Human Scrubber (HRRT) is not available via conda. If using the conda profile, set `skip_hrrt: true` in your `params.yaml` file.
+
+
+#### 4. Set required parameters:
 **Important:** All pipeline parameters **must be set in the `params.yaml` file**. Make sure you edit this file to provide the correct paths and values before running the pipeline.
 
 ```yaml
@@ -259,9 +276,8 @@ output_dir/
 ### Assembly Polishing (De Novo Mode Only)
 
 The pipeline supports optional assembly polishing using Pilon to improve contig quality. When enabled:
-1. Reads are aligned back to assembled contigs for validation
-2. Pilon corrects small errors and improves consensus accuracy
-3. Terminal low-coverage regions are automatically trimmed
+1. Pilon corrects small errors and improves consensus accuracy
+2. Terminal low-coverage regions are automatically trimmed
 
 To enable polishing, set in `params.yaml`:
 ```yaml
