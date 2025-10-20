@@ -5,5 +5,5 @@ channels:
   - defaults
 dependencies:
   # Core workflow
-  - nextflow>=23.04.0
-  - python>=3.6
+  - nextflow>=25.04.0
+  - python>=3.10
