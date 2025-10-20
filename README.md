@@ -36,7 +36,7 @@ $ mkdir fastq
 **Note:** FASTQ files must follow the Illumina naming format: `*_L001_R{1,2}_*.fastq.gz` (e.g., `sample_name_L001_R1_001.fastq.gz` and `sample_name_L001_R2_001.fastq.gz`)
 
 
-#### 3. (Optional) Conda Environment Installation
+#### 3. (Optional) Conda Environment Installation (Docker or Singularity/Apptainer must be installed on your system)
 
 ```bash
 # Create conda environment
@@ -44,12 +44,10 @@ $ git clone https://github.com/BPHL-Molecular/Juno.git
 $ cd Juno
 $ conda env create -f environment.yml
 
-# Activate and run environment
+# Activate and run environment using preferred profile
 $ conda activate juno
-$ nextflow run juno.nf -profile conda -params-file params.yaml
+$ nextflow run juno.nf -profile apptainer -params-file params.yaml
 ```
-
-**Conda Limitation:** The NCBI SRA Human Scrubber (HRRT) is not available via conda. If using the conda profile, set `skip_hrrt: true` in your `params.yaml` file.
 
 
 #### 4. Set required parameters:
@@ -307,4 +305,5 @@ We welcome contributions to make Juno better! Feel free to open issues or submit
 
 ## ⚖️ License
 Juno is licensed under the [MIT License](LICENSE).
+
 
