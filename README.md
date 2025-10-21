@@ -12,13 +12,13 @@ $ nextflow run juno.nf -profile singularity -params-file params.yaml
 $ sbatch ./juno.sh
 ```
 
-## 📦 Dependencies
+## Dependencies
 - [Nextflow 23.04.0+](https://www.nextflow.io/docs/latest/install.html)
 - [Singularity](https://docs.sylabs.io/guides/latest/user-guide/quick_start.html#quick-installation-steps) or [Docker](https://docs.docker.com/engine/install/)
 - [Python 3.6+](https://docs.python.org/3/using/unix.html)
 - [Slurm](https://slurm.schedmd.com/documentation.html) (This applies only if HiPerGator is used)
 
-## ⚙️ Configuration
+## Configuration
 
 #### 1. Clone this repository
 
@@ -27,16 +27,16 @@ $ git clone https://github.com/BPHL-Molecular/Juno.git
 $ cd Juno
 ```
 
-#### 2. Create a directory for Input FASTQ Files
+#### 2. Create a directory for input FASTQ files
 
 ```bash
 $ mkdir fastq
 # move or copy your FASTQ files into this directory
 ```
-**Note:** FASTQ files must follow the Illumina naming format: `*_L001_R{1,2}_*.fastq.gz` (e.g., `sample_name_L001_R1_001.fastq.gz` and `sample_name_L001_R2_001.fastq.gz`)
+###### **Note:** FASTQ files must follow the Illumina naming format: `*_L001_R{1,2}_*.fastq.gz` (e.g., `sample_name_L001_R1_001.fastq.gz` and `sample_name_L001_R2_001.fastq.gz`)
 
 
-#### 3. (Optional) Conda Environment Installation (Docker or Singularity/Apptainer must be installed on your system)
+#### 3. (Optional) Conda environment installation (Docker or Singularity/Apptainer must be installed on your system)
 
 ```bash
 # Create conda environment
@@ -131,51 +131,32 @@ flowchart TD
 ```
 
 ## Pipeline Assembly Modes
+The pipeline runs in **one assembly mode at a time**, set via the `assembly_mode` parameter in `params.yaml`. Choose the mode appropriate for your data and objectives:
 
-### Quality Control (Both Modes)
-1. **Read Statistics & Preprocessing**
-   - Raw read statistics - [`fastq-scan`](https://github.com/rpetit3/fastq-scan)
-   - Adapter and quality trimming - [`trimmomatic`](https://github.com/usadellab/Trimmomatic)
-   - Adapter removal - [`bbduk`](https://jgi.doe.gov/data-and-tools/software-tools/bbtools/)
-   - PhiX removal - [`bbduk`](https://jgi.doe.gov/data-and-tools/software-tools/bbtools/)
-   - Human Read Removal (optional) - [`sra-human-scrubber`](https://github.com/ncbi/sra-human-scrubber)
-   - Final QC report - [`fastp`](https://github.com/OpenGene/fastp)
+##### Reference-Based Mode:
+Best for:
+- Targeted amplicon sequencing data
+- Samples with known, closely related reference genomes
+- Detecting specific variants and generating consensus sequences
+- Standard surveillance and outbreak investigations
+- When high-quality reference genome is available
 
-2. **Taxonomic Classification**
-   - Read classification - [`kraken2`](https://github.com/DerrickWood/kraken2)
-   - Filter classified OROV reads - [`krakentools`](https://github.com/jenniferlu717/KrakenTools)
+Outputs:
+- Per-segment consensus sequences aligned to reference coordinates
+- Variant calls (SNVs/indels)
 
-### Reference-Based Assembly
-3. **Reference-Based Assembly**
-   - Reference alignment - [`bwa`](https://github.com/lh3/bwa)
-   - SAM/BAM processing - [`samtools`](https://github.com/samtools/samtools)
-   - Variant calling & consensus - [`ivar`](https://github.com/andersen-lab/ivar)
-4. **Quality Assessment**
-   - Assembly evaluation - [`quast`](https://github.com/ablab/quast)
-5. **Aggregate and Summarize Results**
-   - Aggregate results from bioinformatics analyses - [`multiqc`](https://github.com/MultiQC/MultiQC)
-   - Summary report generation with QC pass/fail status
-###### Please see the [notes](https://github.com/BPHL-Molecular/Juno/tree/main/references) on the reference genomes used in this workflow.
+##### De Novo Mode:
+Best for:
+- Metagenomic sequencing data
+- Samples with divergent or unknown variants
+- Discovery of novel sequences or reassortants
+- When reference genome may not represent sample diversity
+- Exploratory analysis of viral populations
 
-
-### De Novo Assembly Mode
-3. **De Novo Assembly**
-   - Genome assembly - [`spades`](https://github.com/ablab/spades)
-   - Contig validation alignment - [`bwa`](https://github.com/lh3/bwa)
-   - BAM processing - [`samtools`](https://github.com/samtools/samtools)
-4. **Assembly Polishing (Optional)**
-   - Polish assembly - [`pilon`](https://github.com/broadinstitute/pilon)
-   - Trim low-coverage terminals - Custom Python script
-5. **Contig Classification**
-   - Reference database creation - [`makeblastdb`](https://blast.ncbi.nlm.nih.gov/doc/blast-help/downloadblastdata.html)
-   - Contig classification - [`blastn`](https://blast.ncbi.nlm.nih.gov/doc/blast-help/)
-   - Segment assignment and formatting
-6. **Quality Assessment**
-   - Assembly evaluation - [`quast`](https://github.com/ablab/quast)
-7. **Aggregate and Summarize Results**
-   - Aggregate results from bioinformatics analyses - [`multiqc`](https://github.com/MultiQC/MultiQC)
-   - Summary report generation with assembly status
-
+Outputs:
+- Assembled contigs
+- Polished contigs (if polishing contigs was enbaled)
+- Contigs classified by genome segment (L, M, S)
 
 ## 📂 Output Structure
 
@@ -233,7 +214,7 @@ output_dir/
 └── summary_report.tsv   # Summary report for all samples
 ```
 
-## 📋 Summary Report Metrics
+## Summary Report Metrics
 
 ### Reference Mode
 - Sample and reference identifiers
@@ -257,7 +238,7 @@ output_dir/
 - Validation statistics (mapped reads, mapping percentage, mean depth per segment)
 - Assembly status (ASSEMBLED/FRAGMENTED/NO_ASSEMBLY)
 
-## 🔍 Assembly Quality Assessment
+## Assembly Quality Assessment
 
 ### Reference Mode QC Criteria
 - **PASS**: Coverage ≥90% AND depth ≥15x AND N-bases ≤5%
@@ -305,5 +286,6 @@ We welcome contributions to make Juno better! Feel free to open issues or submit
 
 ## ⚖️ License
 Juno is licensed under the [MIT License](LICENSE).
+
 
 
