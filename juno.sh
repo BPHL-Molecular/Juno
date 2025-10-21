@@ -19,4 +19,4 @@ export NXF_SINGULARITY_CACHEDIR=/path/to/singularity/cache
 export PATH
 
 # Run nextflow command
-nextflow run juno.nf -profile singularity -params-file params.yaml
+nextflow run juno.nf -profile apptainer -params-file params.yaml
