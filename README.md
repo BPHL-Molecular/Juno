@@ -1,6 +1,6 @@
 # Juno 🦟🦠🧬📊 - A Nextflow Pipeline for Oropouche Virus (OROV) Genome Assembly
 
-Juno is designed for processing Illumina paired-end sequencing data for OROV genome assembly, supporting both reference-based and de novo assembly modes with comprehensive QC, taxonomic classification, and assembly evaluation.
+Juno is designed for processing Illumina paired-end sequencing data for OROV genome assembly, supporting either reference-based or de novo assembly modes with comprehensive QC, taxonomic classification, and assembly evaluation.
 
 ## ⚡ Usage
 ```bash
@@ -13,9 +13,9 @@ $ sbatch ./juno.sh
 ```
 
 ## Dependencies
-- [Nextflow 23.04.0+](https://www.nextflow.io/docs/latest/install.html)
+- [Nextflow 25.04.0+](https://www.nextflow.io/docs/latest/install.html)
 - [Singularity](https://docs.sylabs.io/guides/latest/user-guide/quick_start.html#quick-installation-steps) or [Docker](https://docs.docker.com/engine/install/)
-- [Python 3.6+](https://docs.python.org/3/using/unix.html)
+- [Python 3.10+](https://docs.python.org/3/using/unix.html)
 - [Slurm](https://slurm.schedmd.com/documentation.html) (This applies only if HiPerGator is used)
 
 ## Configuration
@@ -68,14 +68,16 @@ kraken2_db: "/path/to/kraken2/database"
 skip_hrrt: false
 
 # Assembly polishing with Pilon (only used in de novo mode)
-polish_contigs: false
+polish_contigs: true
 ```
 
 You will need to download the kraken2/bracken viral database from the BenLangmead Index zone [link](https://benlangmead.github.io/aws-indexes/k2) for read classification.
 
+Please be aware that using larger databases (e.g., Standard, PlusPF) will require significantly more memory resources. Ensure your system has sufficient memory allocated or adjust resource parameters in `nextflow.config` or `juno.sh` (if using Slurm/HiPerGator) accordingly.
+
 The pipeline includes a step for removing human reads using [NCBI's SRA Human Read Removal Tool (HRRT)](https://ncbiinsights.ncbi.nlm.nih.gov/2023/02/02/scrubbing-human-sequences-sra-submissions/). This step is enabled by default, but please note that it significantly increases runtime due to the large container size and the intensive I/O involved in decompressing input files and recompressing cleaned outputs.
 
-To skip this step and use raw reads directly, set: ```skip_hrrt: true```
+To skip this step, set: ```skip_hrrt: true```
 
 Note: Skipping HRRT may be appropriate for:
 - Non-human samples
@@ -214,56 +216,37 @@ output_dir/
 └── summary_report.tsv   # Summary report for all samples
 ```
 
-## Summary Report Metrics
+## Assembly Quality Status Legend (summary_report.tsv)
 
-### Reference Mode
-- Sample and reference identifiers
-- Raw read counts
-- Cleaned read counts
-- Classification read counts
-- Mapping statistics
-- Coverage metrics
-- Variant counts
-- Assembly quality metrics
-- QC status (PASS/FAIL/PASS_W_HIGH_N_BASES)
+#### Reference Mode QC Criteria
+- PASS: Coverage ≥90% AND depth ≥15x AND "N" bases ≤5%
+- PASS_W_HIGH_N_BASES: Coverage ≥90% AND depth ≥15x BUT "N" bases >5%
+- FAIL: Coverage <90% OR depth <15x
 
-### De Novo Mode
-- Sample identifier and segment
-- Raw read counts
-- Cleaned read counts
-- Classification read counts
-- Contig counts per segment (L, M, S)
-- Assembly metrics (largest contig, reference length, NA50)
-- BLAST quality metrics (identity, coverage)
-- Validation statistics (mapped reads, mapping percentage, mean depth per segment)
-- Assembly status (ASSEMBLED/FRAGMENTED/NO_ASSEMBLY)
+#### De Novo Mode Assembly Status
+- ASSEMBLED: Contigs successfully assembled with largest contig within 90-150% of quality threshold (length)
+- FRAGMENTED: Contigs exist but largest contig is outside the 90-150% quality threshold (length)
+- NO_ASSEMBLY: No contigs assembled or classified for segment
 
-## Assembly Quality Assessment
+## Tools Used
 
-### Reference Mode QC Criteria
-- **PASS**: Coverage ≥90% AND depth ≥15x AND N-bases ≤5%
-- **PASS_W_HIGH_N_BASES**: Coverage ≥90% AND depth ≥15x BUT N-bases >5%
-- **FAIL**: Coverage <90% OR depth <15x
+Juno is made possible thanks to these bioinformatics tools:
 
-### De Novo Mode Assembly Status
-- **ASSEMBLED**: Contigs successfully assembled with largest contig 90-150% of reference length
-- **FRAGMENTED**: Contigs exist but largest contig is outside the 90-150% quality threshold
-- **NO_ASSEMBLY**: No contigs assembled or classified for segment
-
-## Advanced Options
-
-### Assembly Polishing (De Novo Mode Only)
-
-The pipeline supports optional assembly polishing using Pilon to improve contig quality. When enabled:
-1. Pilon corrects small errors and improves consensus accuracy
-2. Terminal low-coverage regions are automatically trimmed
-
-To enable polishing, set in `params.yaml`:
-```yaml
-polish_contigs: true
-```
-
-**Note:** Polishing increases runtime but may improve assembly accuracy, particularly for low-coverage terminal regions.
+- [`fastq-scan`](https://github.com/rpetit3/fastq-scan) - raw read statistics
+- [`trimmomatic`](https://github.com/usadellab/Trimmomatic) - quality trimming
+- [`bbduk`](https://github.com/bbushnell/BBTools) - adapter and PhiX removal
+- [`sra-human-scrubber (HRRT)`](https://github.com/ncbi/sra-human-scrubber) - human read removal
+- [`fastp`](https://github.com/OpenGene/fastp) - final QC report
+- [`kraken2`](https://github.com/DerrickWood/kraken2) - taxonomic classification
+- [`krakentools`](https://github.com/jenniferlu717/KrakenTools) - extract classified reads
+- [`bwa`](https://github.com/lh3/bwa) - read alignment
+- [`samtools`](https://github.com/samtools/samtools) - SAM/BAM processing
+- [`ivar`](https://github.com/andersen-lab/ivar) - variant calling & consensus generation
+- [`spades`](https://github.com/ablab/spades) - de novo genome assembly
+- [`pilon`](https://github.com/broadinstitute/pilon) - assembly polishing
+- [`blast`](https://blast.ncbi.nlm.nih.gov/doc/blast-help/) - contig classification
+- [`quast`](https://github.com/ablab/quast) - assembly evaluation
+- [`multiqc`](https://github.com/MultiQC/MultiQC) - aggregate QC reporting
 
 ## 🐛 Troubleshooting
 **Pipeline Errors:**
@@ -286,6 +269,7 @@ We welcome contributions to make Juno better! Feel free to open issues or submit
 
 ## ⚖️ License
 Juno is licensed under the [MIT License](LICENSE).
+
 
 
 
