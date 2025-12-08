@@ -149,7 +149,7 @@ Outputs:
 
 ##### De Novo Mode:
 Best for:
-- Metagenomic sequencing data
+- Untargeted or Metagenomic sequencing data
 - Samples with divergent or unknown variants
 - Discovery of novel sequences or reassortants
 - When reference genome may not represent sample diversity
@@ -269,6 +269,7 @@ We welcome contributions to make Juno better! Feel free to open issues or submit
 
 ## ⚖️ License
 Juno is licensed under the [MIT License](LICENSE).
+
 
 
 
