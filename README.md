@@ -20,6 +20,10 @@ $ sbatch ./juno.sh
 - [Python 3.10+](https://docs.python.org/3/using/unix.html)
 - [Slurm](https://slurm.schedmd.com/documentation.html) (This applies only if HiPerGator is used)
 
+## Recommended Resource Allocation
+
+Allocate **at least 16 CPU cores and 64 GB RAM** when using the viral Kraken2 Database, or **16 CPU cores and 200 GB RAM (or more)** when using larger Kraken2 databases.
+
 ## Configuration
 
 #### 1. Clone this repository
@@ -271,6 +275,7 @@ We welcome contributions to make Juno better! Feel free to open issues or submit
 
 ## ⚖️ License
 Juno is licensed under the [MIT License](LICENSE).
+
 
 
 
