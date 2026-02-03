@@ -2,6 +2,8 @@
 
 Juno is designed for processing Illumina paired-end sequencing data for OROV genome assembly, supporting either reference-based or de novo assembly modes with comprehensive QC, taxonomic classification, and assembly evaluation.
 
+#### Disclaimer: results of pipeline are intended for research use only and obtained by procedures that were not CLIA validated.
+
 ## ⚡ Usage
 ```bash
 $ nextflow run juno.nf -profile singularity -params-file params.yaml
@@ -36,13 +38,13 @@ $ mkdir fastq
 ###### **Note:** FASTQ files must follow the Illumina naming format: `*_L001_R{1,2}_*.fastq.gz` (e.g., `sample_name_L001_R1_001.fastq.gz` and `sample_name_L001_R2_001.fastq.gz`)
 
 
-#### 3. (Optional) Conda environment installation (Docker or Singularity/Apptainer must be installed on your system)
+#### 3. (Optional) Conda environment installation (Nextflow and Docker/Singularity/Apptainer must be installed on your system)
 
 ```bash
 # Create conda environment
 $ git clone https://github.com/BPHL-Molecular/Juno.git
 $ cd Juno
-$ conda env create -f environment.yml
+$ conda create -n juno -c conda-forge python=3.10
 
 # Activate and run environment using preferred profile
 $ conda activate juno
@@ -269,6 +271,7 @@ We welcome contributions to make Juno better! Feel free to open issues or submit
 
 ## ⚖️ License
 Juno is licensed under the [MIT License](LICENSE).
+
 
 
 
